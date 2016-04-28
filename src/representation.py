@@ -31,7 +31,7 @@ class Representation:
         """
         model = SparsePCA(n_components=config['pca_components'], alpha=10)
         model.fit(self.data)
-        return model.transform(self.data), model.components_, model.explained_variance_ratio_
+        return model.transform(self.data), model.components_
 
     def kmeans(self):
         km = KMeans(n_clusters=config['kmeans_clusters'])

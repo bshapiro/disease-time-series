@@ -6,8 +6,8 @@ from pickle import load
 
 hRSV_matrix = load(open(config['hRSV_matrix']))
 h_sapiens_matrix = load(open(config['h_sapiens_matrix']))
-h_sapiens_pca = Representation(h_sapiens_matrix, 'pca', 0).getRepresentation()
-hRSV_pca = Representation(hRSV_matrix, 'pca', 0).getRepresentation()
+h_sapiens_pca = Representation(h_sapiens_matrix, 'sparse_pca', 0).getRepresentation()
+hRSV_pca = Representation(hRSV_matrix, 'sparse_pca', 0).getRepresentation()
 import pdb; pdb.set_trace()
 fig = plot_2D(hRSV_pca[0])
 plt.show()
