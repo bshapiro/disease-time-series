@@ -29,7 +29,7 @@ class Representation:
         Runs PCA on data and returns projected data, the principle components,
         and explained variance.
         """
-        model = SparsePCA(n_components=config['pca_components'], alpha=10)
+        model = SparsePCA(n_components=config['pca_components'], alpha=config['sparse_pca_alpha'])
         model.fit(self.data)
         return model.transform(self.data), model.components_
 

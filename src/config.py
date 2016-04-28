@@ -13,4 +13,5 @@ config = dict(
     consolidate_duplicate_probes='mean',
     gp_type='rbf',
     gp_variance='0.3',
+    sparse_pca_alpha='1'
 )
