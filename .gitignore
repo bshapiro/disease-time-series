@@ -1,2 +1,5 @@
 *.pyc
 *.DS_Store
+src/geneset_enrichment.m
+*.dump
+*.mat
