@@ -196,10 +196,11 @@ if __name__ == "__main__":
     basic_view2.pca_view()
     basic_view2.pca_view_diff()
     """
+
     print "Cleaning data..."
     view1 = basic_view1.clean()
     view2 = basic_view2.clean()
-    """
+
     print "PCA results on cleaned data:"
 
     basic_view1.view = view1
@@ -228,3 +229,4 @@ if __name__ == "__main__":
     print "Running GP pipeline..."
     gp_pipeline = GPPipeline(view1, genes, timesteps)
     gp_pipeline.run_pipeline(pca_clusters)
+    """
