@@ -8,5 +8,5 @@ config = dict(
     gp_variance=4,
     clean_components=2,
     clean_data=True,
-    cca_reg=0.00001
+    cca_reg=0.0001
 )

@@ -214,15 +214,15 @@ if __name__ == "__main__":
     pca_clusters, cca_clusters = cluster_pipeline.run_pipeline()
 
     print "Dumping clusters for enrichment analysis..."
-    dump(pca_clusters, open(options.dataset + '_pca_clusters.dump', 'w'))
-    dump(cca_clusters, open(options.dataset + '_cca_clusters.dump', 'w'))
+    dump(pca_clusters, open(options.dataset + '_pca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['pca_components'] + ',cca_reg=' + config['cca_reg'] + '.dump', 'w'))
+    dump(cca_clusters, open(options.dataset + '_cca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['cca_components'] + ',cca_reg=' + config['cca_reg'] + '.dump', 'w'))
 
-    savemat(open('../data/' + options.dataset + '_pca_clusters.mat', 'w'), pca_clusters)
-    savemat(open('../data/' + options.dataset + '_cca_clusters.mat', 'w'), cca_clusters)
+    savemat(open('../data/' + options.dataset + '_pca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['pca_components'] + ',cca_reg=' + config['cca_reg'] + '.mat', 'w'), pca_clusters)
+    savemat(open('../data/' + options.dataset + '_cca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['cca_components'] + ',cca_reg=' + config['cca_reg'] + '.mat', 'w'), cca_clusters)
     savemat(open('../data/' + options.dataset + '_genes.mat', 'w'), {'genes': genes})
     """
-    pca_clusters = load(open(options.dataset + '_pca_clusters_cleaned=3,components=3,cca=10e-4.dump'))
-    cca_clusters = load(open(options.dataset + '_cca_clusters_cleaned=3,components=3,cca=10e-4.dump'))
+    pca_clusters = load(open(options.dataset + '_pca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['pca_components'] + ',cca_reg=' + config['cca_reg'] + '.dump'))
+    cca_clusters = load(open(options.dataset + '_cca_clusters_cleaned=' + config['clean_components'] + ',components=' + config['cca_components'] + ',cca_reg=' + config['cca_reg'] + '.dump'))
 
     print "Running GP pipeline..."
     gp_pipeline = GPPipeline(view1, genes, timesteps)
