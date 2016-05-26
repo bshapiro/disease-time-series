@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 import sklearn.preprocessing as skp
 from numpy.linalg import svd as svd_func
 import numpy as np
-import rcca
+from tools import rcca
 
 
 class Representation:
@@ -35,7 +35,7 @@ class Representation:
         #model.fit(np.transpose(self.data), np.transpose(self.data2))
         #import pdb; pdb.set_trace()
         #return model.x_weights_, model.y_weights_, model.x_loadings_, model.y_loadings_
-        model = rcca.CCA(kernelcca=False, numCC=config['cca_components'], reg=0.01)
+        model = rcca.CCA(kernelcca=False, numCC=config['cca_components'], reg=config['cca_reg'])
         model.train([np.transpose(self.data), np.transpose(self.data2)])
         return model.ws[0], model.comps[0], model.ws[1], model.comps[1]
 

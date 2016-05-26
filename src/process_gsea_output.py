@@ -14,17 +14,17 @@ parser.add_option("-d", "--d", dest="gsea_output_directory",
 
 
 file_dict = {}
-files = glob(options.gsea_output_directory)
+files = glob(options.gsea_output_directory + "*")
 for filename in files:
     f = open(filename)
-    lines = f.readlines()
+    lines = f.readlines()[1:]
     significant = []
     for line in lines:
-        items = line.split(',')
+        items = line[:-1].split(',')
         bp = items[0]
         p_value = items[1]
-        fdr = items[2][:-1]
-        if fdr < options.fdr_threshold and p_value < options.p_value_threshold:
+        fdr = items[2]
+        if float(fdr) < float(options.fdr_threshold) and float(p_value) < float(options.p_value_threshold):
             significant.append(items)
     if significant != []:
         file_dict[filename] = significant

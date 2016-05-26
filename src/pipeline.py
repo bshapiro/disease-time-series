@@ -13,7 +13,7 @@ from scipy.io import savemat
 
 parser = OptionParser()
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
-                  help="Donor for whom to estimate cell type proportions")
+                  help="Dataset")
 parser.add_option("--dir", dest="directory",
                   help="Directory to look for data files.")
 
@@ -34,7 +34,7 @@ class ClusterPipeline:
         view1_pca_loadings = self.learn_loadings(self.view1, 'pca')
         view2_pca_loadings = self.learn_loadings(self.view2, 'pca')
         if self.view1.shape[1] == self.view2.shape[1] + 1:
-            cca_loadings = self.learn_loadings(self.view1[:,1:], 'cca', view2=self.view2)
+            cca_loadings = self.learn_loadings(self.view1[:, 1:], 'cca', view2=self.view2)
         else:
             cca_loadings = self.learn_loadings(self.view1, 'cca', view2=self.view2)
         view1_cca_loadings = cca_loadings[0]
@@ -71,7 +71,7 @@ class ClusterPipeline:
         S[:view_dim1, :view_dim1] = np.diag(S_vector)
         svd_loadings = np.dot(U, S)
         # import pdb; pdb.set_trace()
-        return svd_loadings[:,:config['pca_components']]
+        return svd_loadings[:, :config['pca_components']]
 
     def learn_cca_loadings(self, view1, view2):
         cca = Representation(view1, 'cca', axis=0, data2=view2)
@@ -81,6 +81,7 @@ class ClusterPipeline:
 
     def process_clusters(self, clusters, cluster_centers):
         cluster_dict = {}
+        import pdb; pdb.set_trace()
         for i in range(len(clusters)):
             cluster_label = "c" + str(clusters[i])
             gene = self.genes[i]
@@ -102,15 +103,16 @@ class GPPipeline:
 
     def run_pipeline(self, clusters):
         cluster_time_series = self.generate_time_series(clusters)
-        pca_sig_clusters = ['c22']
-        cca_sig_clusters = ['c3', 'c17', 'c66', 'c30', 'c33', 'c44', 'c58', 'c63']
+        pca_sig_clusters = ['c11', 'c61']
+        cca_sig_clusters = ['c12', 'c40', 'c44', ]
         for cluster_name, trajectory in cluster_time_series.items():
-            if cluster_name in pca_sig_clusters:
+            if cluster_name in cca_sig_clusters:
                 print cluster_name
-                #plt.plot(timesteps, trajectory[0])
-                #plt.show()
-                #import pdb; pdb.set_trace()
-                fit_gp_with_priors(trajectory[0], self.timesteps)
+                print "Number of genes:", len(clusters[cluster_name])
+                plt.plot(timesteps, trajectory[0])
+                plt.show()
+                import pdb; pdb.set_trace()
+                #fit_gp_with_priors(trajectory[0], self.timesteps)
 
     def generate_time_series(self, cluster_dict):
         cluster_time_series = {}
@@ -131,10 +133,9 @@ class BasicPipeline:
 
     def pca_view(self):
         pca = Representation(self.view, 'pca').getRepresentation()
-        print pca
         plt.plot(pca[2])
         plt.show()
-        # import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         plt.clf()
         return pca
 
@@ -143,8 +144,7 @@ class BasicPipeline:
         pca = Representation(view, 'pca').getRepresentation()
         plt.plot(pca[2])
         plt.show()
-        print pca
-        # import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         plt.clf()
         return pca
 
@@ -158,18 +158,17 @@ class BasicPipeline:
 
     def clean(self):
         print "Cleaning data..."
-        U, S, V = Representation(self.view, 'svd').getRepresentation()
         view = scale(self.view)
+        U, S, V = Representation(view, 'svd').getRepresentation()
         new_view = np.ndarray(self.view.shape)
         loadings = U[:, 0:config['clean_components']]
         for i in range(view.shape[1]):
-            feature_vector = self.view[:, i]
-            model = LinearRegression(fit_intercept=False)  # no need to include intercept if re-centering
+            feature_vector = view[:, i]
+            model = LinearRegression(fit_intercept=True)
             model.fit(loadings, feature_vector)
             residual = feature_vector - model.predict(loadings)
             new_view[:, i] = residual
 
-        new_view = scale(new_view)
         return new_view
 
 
@@ -183,12 +182,12 @@ if __name__ == "__main__":
     elif options.dataset is None:
         sys.exit('Please supply a dataset to use.')
 
-    view1 = np.transpose(load(open(options.directory + files[0])))
-    view2 = np.transpose(load(open(options.directory + files[1])))
+    raw_view1 = np.transpose(load(open(options.directory + files[0])))
+    raw_view2 = np.transpose(load(open(options.directory + files[1])))
     genes = load(open(options.directory + files[2]))
 
-    basic_view1 = BasicPipeline(view1, genes)
-    basic_view2 = BasicPipeline(view2, genes)
+    basic_view1 = BasicPipeline(np.log2(raw_view1 + 2), genes)
+    basic_view2 = BasicPipeline(np.log2(raw_view2 + 2), genes)
     print "PCA results on uncleaned data:"
     """
     basic_view1.pca_view()
@@ -196,7 +195,6 @@ if __name__ == "__main__":
     basic_view2.pca_view()
     basic_view2.pca_view_diff()
     """
-
     print "Cleaning data..."
     view1 = basic_view1.clean()
     view2 = basic_view2.clean()
@@ -205,10 +203,10 @@ if __name__ == "__main__":
 
     basic_view1.view = view1
     basic_view2.view = view2
-    basic_view1.pca_view()
-    basic_view1.pca_view_diff()
-    basic_view2.pca_view()
-    basic_view2.pca_view_diff()
+    # basic_view1.pca_view()
+    # basic_view1.pca_view_diff()
+    # basic_view2.pca_view()
+    # basic_view2.pca_view_diff()
 
     print "Running cluster pipeline..."
 
@@ -223,10 +221,10 @@ if __name__ == "__main__":
     savemat(open('../data/' + options.dataset + '_cca_clusters.mat', 'w'), cca_clusters)
     savemat(open('../data/' + options.dataset + '_genes.mat', 'w'), {'genes': genes})
     """
-    pca_clusters = load(open(options.dataset + '_pca_clusters.dump'))
-    cca_clusters = load(open(options.dataset + '_cca_clusters.dump'))
+    pca_clusters = load(open(options.dataset + '_pca_clusters_cleaned=3,components=3,cca=10e-4.dump'))
+    cca_clusters = load(open(options.dataset + '_cca_clusters_cleaned=3,components=3,cca=10e-4.dump'))
 
     print "Running GP pipeline..."
     gp_pipeline = GPPipeline(view1, genes, timesteps)
-    gp_pipeline.run_pipeline(pca_clusters)
+    gp_pipeline.run_pipeline(cca_clusters)
     """
