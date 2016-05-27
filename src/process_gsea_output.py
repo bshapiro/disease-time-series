@@ -14,7 +14,7 @@ parser.add_option("-d", "--d", dest="gsea_output_directory",
 
 
 file_dict = {}
-files = glob(options.gsea_output_directory + "*")
+files = glob(options.gsea_output_directory + "*.csv")
 for filename in files:
     f = open(filename)
     lines = f.readlines()[1:]
