@@ -163,12 +163,12 @@ class BasicPipeline:
         loadings = U[:, 0:config['clean_components']]
         for i in range(view.shape[1]):
             feature_vector = view[:, i]
-            model = LinearRegression(fit_intercept=True)
+            model = LinearRegression(fit_intercept=False)
             model.fit(loadings, feature_vector)
             residual = feature_vector - model.predict(loadings)
             new_view[:, i] = residual
 
-        return new_view
+        return scale(new_view)
 
 
 if __name__ == "__main__":
