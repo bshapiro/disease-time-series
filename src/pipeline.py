@@ -9,6 +9,7 @@ from sklearn.preprocessing import scale
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 from scipy.io import savemat
+import pdb
 
 
 parser = OptionParser()
@@ -102,25 +103,40 @@ class GPPipeline:
 
     def run_pipeline(self, clusters):
         cluster_time_series = self.generate_time_series(clusters)
-        pca_sig_clusters = ['c11', 'c61']
-        cca_sig_clusters = ['c12', 'c40', 'c44', ]
-        for cluster_name, trajectory in cluster_time_series.items():
-            if cluster_name in cca_sig_clusters:
+        pca_sig_clusters = ['c61', 'c45', 'c30']
+        cca_sig_clusters = ['c45']
+        for cluster_name, trajectories in cluster_time_series.items():
+            if cluster_name in pca_sig_clusters:
+                avg_trajectory = sum(trajectories) / len(trajectories)
                 print cluster_name
                 print "Number of genes:", len(clusters[cluster_name])
-                plt.plot(timesteps, trajectory[0])
-                plt.show()
-                import pdb; pdb.set_trace()
+                self.plot_avg_trajectory(timesteps, avg_trajectory)
+                self.plot_all_trajectories(timesteps, trajectories)
                 #fit_gp_with_priors(trajectory[0], self.timesteps)
 
+    def plot_avg_trajectory(self, timesteps, avg_trajectory):
+        plt.clf()
+        plt.plot(timesteps, avg_trajectory)
+        plt.show()
+        pdb.set_trace()
+
+    def plot_all_trajectories(self, timesteps, trajectories):
+        plt.clf()
+        trajectories = scale(trajectories)
+        for trajectory in trajectories:
+            plt.plot(timesteps, trajectory)
+        plt.show()
+        pdb.set_trace()
+
     def generate_time_series(self, cluster_dict):
+        pdb.set_trace()
         cluster_time_series = {}
         for cluster_name, cluster_genes in cluster_dict.items():
-            sum_vector = np.zeros((1, self.num_timesteps))
+            vectors = []
             for gene in cluster_genes:
                 index = self.genes.index(gene)
-                sum_vector += self.time_series[index, :]
-            cluster_time_series[cluster_name] = sum_vector / len(cluster_genes)
+                vectors.append(self.time_series[index, :])
+            cluster_time_series[cluster_name] = scale(vectors)
         return cluster_time_series
 
 
@@ -134,7 +150,7 @@ class BasicPipeline:
         pca = Representation(self.view, 'pca').getRepresentation()
         plt.plot(pca[2])
         plt.show()
-        import pdb; pdb.set_trace()
+        pdb.set_trace()
         plt.clf()
         return pca
 
@@ -143,7 +159,7 @@ class BasicPipeline:
         pca = Representation(view, 'pca').getRepresentation()
         plt.plot(pca[2])
         plt.show()
-        import pdb; pdb.set_trace()
+        pdb.set_trace()
         plt.clf()
         return pca
 
@@ -159,7 +175,7 @@ class BasicPipeline:
         print "Cleaning data..."
         view = scale(self.view)
         U, S, V = Representation(view, 'svd').getRepresentation()
-        new_view = np.ndarray(self.view.shape)
+        new_view = np.ndarray(view.shape)
         loadings = U[:, 0:config['clean_components']]
         for i in range(view.shape[1]):
             feature_vector = view[:, i]
@@ -168,7 +184,9 @@ class BasicPipeline:
             residual = feature_vector - model.predict(loadings)
             new_view[:, i] = residual
 
-        return scale(new_view)
+        new_view = scale(new_view)
+
+        return new_view
 
 
 if __name__ == "__main__":
@@ -199,12 +217,12 @@ if __name__ == "__main__":
     view2 = basic_view2.clean()
 
     print "PCA results on cleaned data:"
-
+    """
     basic_view1.view = view1
     basic_view2.view = view2
-    # basic_view1.pca_view()
+    basic_view1.pca_view()
     # basic_view1.pca_view_diff()
-    # basic_view2.pca_view()
+    basic_view2.pca_view()
     # basic_view2.pca_view_diff()
 
     print "Running cluster pipeline..."
@@ -224,6 +242,6 @@ if __name__ == "__main__":
     cca_clusters = load(open(options.dataset + '_cca_clusters_cleaned=' + str(config['clean_components']) + ',components=' + str(config['cca_components']) + ',cca_reg=' + str(config['cca_reg']) + '.dump'))
 
     print "Running GP pipeline..."
-    gp_pipeline = GPPipeline(view1, genes, timesteps)
-    gp_pipeline.run_pipeline(cca_clusters)
-    """
+    gp_pipeline = GPPipeline(raw_view1, genes, timesteps)
+    gp_pipeline.run_pipeline(pca_clusters)
+    
