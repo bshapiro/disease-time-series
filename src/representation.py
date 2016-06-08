@@ -72,16 +72,9 @@ class Representation:
         km.fit(self.data)
 
         return km.labels_, km.cluster_centers_
-
+    """
     def kmeans(self, data, n=config['kmeans_clusters'], axis=0):
-        """
-        Kmeans clustering on data, each row of data is a sample, columns are features
-        returns representation of data from kmeans results (set in config)
-            -binary = 1/0 for cluster assignments
-            -distance = euclidean distance to each cluster
-        array of cluster labels [0, k-1], and matrix of cluster centers
-        """
-        
+
             model = KMeans(n_clusters=n)
         model.fit(data)
         rep = np.zeros((n, model.labels_.size))
@@ -94,7 +87,7 @@ class Representation:
             rep = cdist(model.cluster_centers_, data, 'euclidean')
 
         return rep, model.labels_, model.cluster_centers_
-        
+    """
 
     def getRepresentation(self):
         return self.method()

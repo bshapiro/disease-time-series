@@ -6,7 +6,8 @@ config = dict(
     gp_type='rbf',
     gp_lengthscale=5,
     gp_variance=4,
-    clean_components=2,
+    clean_components=None,
     clean_data=True,
-    cca_reg=0.0001
+    cca_reg=0.0001,
+    transpose_data=False
 )
