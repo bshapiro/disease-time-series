@@ -57,11 +57,10 @@ class ClusterPipeline:
         svd_results = svd.getRepresentation()
         U = svd_results[0]
         S_vector = svd_results[1]
-        # V = svd_results[2]
-        S = np.zeros((view_dim1, view_dim1), dtype=float)
+        # V = svd _results[2]
+        S = np.zerosd((view_dim1, view_dim1), dtype=float)
         S[:view_dim1, :view_dim1] = np.diag(S_vector)
         svd_loadings = np.dot(U, S)
-        # import pdb; pdb.set_trace()
         return svd_loadings[:, :config['pca_components']]
 
     def learn_cca_loadings(self, view1, view2):
@@ -202,48 +201,48 @@ if __name__ == "__main__":
 
     basic_view1 = BasicPipeline(np.log2(raw_view1 + 2), genes)
     basic_view2 = BasicPipeline(np.log2(raw_view2 + 2), genes)
-    print "PCA results on uncleaned data:"
-    """
-    basic_view1.pca_view()
-    basic_view1.pca_view_diff()
-    basic_view2.pca_view()
-    basic_view2.pca_view_diff()
-    """
+
+    if config['view_pca_plots']:
+        print "Displaying PCA results on uncleaned data..."
+        if not config['time_transform']:
+            basic_view1.pca_view()
+            basic_view2.pca_view()
+        else:
+            basic_view1.pca_view_diff()
+            basic_view2.pca_view_diff()
+
     print "Cleaning data..."
     view1 = basic_view1.clean()
     view2 = basic_view2.clean()
-
-    """
-    print "PCA results on cleaned data:"
-
     basic_view1.view = view1
     basic_view2.view = view2
-    basic_view1.pca_view()
-    # basic_view1.pca_view_diff()
-    basic_view2.pca_view()
-    # basic_view2.pca_view_diff()
-    """
+
+    if config['view_pca_plots']:
+        print "Displaying PCA results on cleaned data..."
+        if not config['time_transform']:
+            basic_view1.pca_view()
+            basic_view2.pca_view()
+        else:
+            basic_view1.pca_view_diff()
+            basic_view2.pca_view_diff()
+
     print "Running cluster pipeline..."
+    cluster_pipeline = ClusterPipeline(config['representation'], view1, view2, genes)
+    clusters, = cluster_pipeline.run_pipeline()
 
-    #cluster_pipeline = ClusterPipeline(view1, view2, genes)
-    #pca_clusters, cca_clusters = cluster_pipeline.run_pipeline()
+    print "Dumping clusters for enrichment analysis..."
+    dump(clusters, open(options.dataset + '_' + config['representation'] + '_' + identifying_string + '.dump', 'w'))
 
-    #print "Dumping clusters for enrichment analysis..."
-    #dump(pca_clusters, open(options.dataset + '_pca_' + identifying_string + '.dump', 'w'))
-    #dump(cca_clusters, open(options.dataset + '_cca_' + identifying_string + '.dump', 'w'))
-
-    pca_clusters = load(open(options.dataset + '_pca_' + identifying_string + '.dump'))
-    cca_clusters = load(open(options.dataset + '_cca_' + identifying_string + '.dump'))
-    import pdb; pdb.set_trace()
-    project_root = '/Users/benj/Documents/Research/Projects/disease-time-series/'
+    print "Loading clusters for enrichment analysis..."
+    clusters = load(open(options.dataset + '_' + config['representation'] + '_' + identifying_string + '.dump'))
 
     print "Running gene set enrichment analyses..."
-    #run_enrichment(pca_clusters, genes, project_root + 'src/gsea/GO-BP.gmt', project_root + 'data/gsea_output/' + identifying_string + '/pca')
-    #run_enrichment(cca_clusters, genes, project_root + 'src/gsea/GO-BP.gmt', project_root + 'data/gsea_output/' + identifying_string + '/cca')
+    run_enrichment(clusters, genes, config['project_root'] + 'src/gsea/GO-BP.gmt', config['project_root'] + 'data/gsea_output/' + identifying_string + '_' + config['representation'] + '/')
 
-    output_dir = project_root + 'data/gsea_output/' + identifying_string + '/'
+    print "Processing GSEA output into significant enrichments..."
+    output_dir = config['project_root'] + 'data/gsea_output/' + identifying_string + '/'
     sig_bps = get_sigs(output_dir, 0.05, 0.1)
 
     print "Running GP pipeline..."
-    gp_pipeline = GPPipeline(raw_view1, genes, timesteps)
-    gp_pipeline.run_pipeline(pca_clusters, sig_bps)
+    gp_pipeline = GPPipeline(view1, genes, timesteps)
+    gp_pipeline.run_pipeline(clusters, sig_bps)
