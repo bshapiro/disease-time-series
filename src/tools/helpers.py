@@ -1,3 +1,9 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import scipy as sp
+import pickle
+
 def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p'):
     num_clusters = np.bincount(cluster_labels).size
     cluster_dict = {}
@@ -10,20 +16,46 @@ def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p
     pickle.dump(cluster_dict, open(savename, 'w'))
     #sio.savemat(savename, cluster_dict)
 
-def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot'):
-    Returns subplot of data plotted over the given axes
-    TODO: make it return subplots so we dont need to use new figures each time
+def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot', savename='plot'):
     fig = plt.figure()
     x_vals = data[:, x]
     y_vals = data[:, y]
     colors = label_coloring(color_labels)
     if colors is not None:
-        plt.scatter(x_vals, y_vals, figure=fig, s=100, c=colors)
+        plt.scatter(x_vals, y_vals, figure=fig, s=50, c=colors)
     else:
-        plt.scatter(x_vals, y_vals, figure=fig, s=100)
+        plt.scatter(x_vals, y_vals, figure=fig, s=50)
+
     plt.title(title, figure=fig)
     plt.xlabel(xlabel, figure=fig)
     plt.ylabel(ylabel, figure=fig)
+    savename = savename + title
+    plt.savefig(savename)
+    plt.close()
+    return
+
+def QQPlot(observed_p, savename):
+    # make the QQ plot, borrowed from Princy's code demonstrating QQ plots
+    n = observed_p.size
+    obs_p = -np.log10(np.sort(observed_p))
+    th_p = np.arange(1/float(n),1+(1/float(n)),1/float(n))
+    th_p = -np.log10(th_p)
+    fig, ax = plt.subplots(ncols=1)
+    ax.scatter(th_p,obs_p)
+    x = np.linspace(*ax.get_xlim())
+    ax.plot(x, x)
+    ax.set_xlabel('Theoretical')
+    ax.set_ylabel('Observed')
+    ax.set_title(savename)
+    plt.savefig(savename)
+
+def benjamini(x, p):
+    x = np.sort(x.flatten())
+    p = p / x.size
+    significant = np.empty(x.size, dtype=bool)
+    for i in range(x.size):
+        significant[i] = x[i] < (i+1) * p
+    return significant
 
 def label_coloring(labels):
     """
@@ -87,3 +119,28 @@ def get_lsv(X, pca):
               new_data = np.transpose(new_data)
         return new_data, linreg
 
+
+def associate(data1, data2, targets1=None, targets2=None, outpath=''):
+    """
+    data1 (ixj)and data2(nxm) are DataFrames
+    targets are the columns of data 2 that we want to check an
+    associationg for with the rows of data1
+    returns an ixm dataframe with benjamini hochberg corrected p values of spearman correlations
+    """
+    print 'Finding Associations...'
+    if targets1 is None:
+        targets1 = data1.axes[0] 
+    if targets2 is None:
+        targets2 = data2.axes[1]
+
+    output = pd.DataFrame(data=np.empty((targets1.size, targets2.size)), index=targets1, columns=targets2)
+    
+    for j in targets2:
+        for i in targets1:
+            notnan = data2[(~np.isnan(data2[j].astype(float)))].index
+            r, p = sp.stats.spearmanr(data1.loc[i, notnan].as_matrix(), data2.loc[notnan,j].as_matrix())
+            output.loc[i,j] = p
+        savepath = outpath+j
+        QQPlot(output[j].as_matrix(), savename=savepath)
+
+    return output

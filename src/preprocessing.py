@@ -1,5 +1,5 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 import sys
 import os
 from pickle import load, dump
@@ -7,6 +7,8 @@ from config import config
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 from sklearn.linear_model import LinearRegression
+from matplotlib.pyplot import *
+from tools.helpers import *
 from representation import *
 
 parser = OptionParser()
@@ -22,6 +24,12 @@ parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
                   help="List of thresholds for operators")
 parser.add_option("-p", "--principal_components", dest="principal_components", default=None,
                   help="List of PCs to regress out")
+parser.add_option("-r", "--regress_out", dest="regress_out", default=None,
+                  help="Regress data on columns of matrix")
+parser.add_option("--iterate_clean", dest="iterate_clean", default=False,
+                  help="Repeat cleaning for 0 to n PCs specified by -p")
+parser.add_option("--odir", dest="odirectory", default='./',
+                  help="Output directory+prefix to prepend to any saved output")
 
 
 
@@ -29,23 +37,24 @@ parser.add_option("-p", "--principal_components", dest="principal_components", d
 
 class Preprocessing:
 
-    def __init__(self, data_source, filter_data=None, operators=None, thresholds=None, clean_components=None, sample_labels=None, feature_labels=None):
+    def __init__(self, data_source, transpose=config['transpose_data'], filter_data=None, operators=None, thresholds=None, clean_components=None, 
+                    regress_out=None, sample_labels=None, feature_labels=None, iterate_clean=False, odir='./'):
         """
         UPDATE
         """
 
         self.data = self.load(data_source)
         self.s = self.load(sample_labels)
-        self.f = self.load(sample_labels)
+        self.f = self.load(feature_labels)
 
         # we can use feature labels and sample labels to fix the orientation of the matrix
         # the only special case is a square matrix, which then we can just make an assumption that features correspond to columns
         # otherwise we orient the matrix sample-rows, feature-cols
         # this will override transpose specified in config
 
-        if config['transpose_data']:
+        if transpose:
             self.data = self.data.T
-
+        """
         if self.data.shape[0] != self.data.shape[1]:
             if self.s is not None:
                 if self.data.shape[1] == self.s.size:
@@ -53,7 +62,7 @@ class Preprocessing:
             elif self.f is not None:
                 if self.data.shape[0] == self.f.size:
                     self.data = self.data.T
-
+        """
         # if filter_data is strings, they are paths to pickles so load them
         # otherwise assume they are in some usable form (numpy array)
         if filter_data is not None and operators is not None and thresholds is not None:
@@ -65,7 +74,20 @@ class Preprocessing:
             for f in filters:
                 self.data = self.filter(f)
 
-        self.data = self.clean(clean_components)
+        if iterate_clean:
+            #cleans = np.empty(clean_components+1)
+            for i in range(clean_components+1):
+                c = np.arange(i)
+                clean = self.clean(c, regress_out)
+                if transpose:
+                    clean = clean.T
+                clean = scale(clean)
+                pca = Representation(clean, 'pca').getRepresentation() 
+                kmeans = Representation(clean, 'kmeans').getRepresentation()
+                plt_title = "RemovedPCs:" + str(c)
+                plot_2D(pca[0], kmeans[0], title=plt_title, savename=odir)                
+                
+        self.data = self.clean(clean_components, regress_out)
 
     def load(self, source):
         """
@@ -164,17 +186,25 @@ class Preprocessing:
             d_matrix[:, i - 1] = self.view[:, i] - self.view[:, i - 1]
         return d_matrix
 
-    def clean(self, components=None):
+    def clean(self, components=None, regress_out=None):
         if components is None:
             components = config['clean_components']
-        if components is None:
-            return self.data
+        if type(components) is int:
+            components = np.arange(components)
+        
         print "Cleaning data..."
         data = scale(self.data)
         U, S, V = Representation(data, 'svd').getRepresentation()
         loadings = U[:, components]
-        new_data = self.regress_out(loadings)
-        new_data = scale(new_data)
+        
+        new_data = np.copy(data)
+        # if there is additional data to regress against, do that first
+        if regress_out is not None:
+            new_data = self.regress_out(regress_out)
+        # if we do actually have PCs to regress out do that now
+        if loadings.size != 0:
+            new_data = self.regress_out(loadings)
+        #new_data = scale(new_data)
 
         return new_data
 
