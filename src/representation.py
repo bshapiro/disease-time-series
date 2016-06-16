@@ -5,6 +5,7 @@ import sklearn.preprocessing as skp
 from numpy.linalg import svd as svd_func
 import numpy as np
 from tools import rcca
+from scipy.spatial.distance import cdist
 
 
 class Representation:
