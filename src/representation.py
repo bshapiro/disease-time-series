@@ -5,6 +5,7 @@ from sklearn.cross_decomposition import CCA
 from sklearn.linear_model import LinearRegression
 import sklearn.preprocessing as skp
 from numpy.linalg import svd as svd_func
+from collections import defaultdict
 import numpy as np
 import itertools
 from tools import rcca
@@ -69,34 +70,32 @@ class Representation:
 
     def kmeans(self):
         print "Running kmeans..."
-
+        
+        conservation = []
         if type(config['kmeans_clusters']) is list:
             # if its a list we are trying to generate a comparison of cluster sizes
             # we compare by looking at pair-wise cluster assignment across 10 iterations
             cluster_sizes = config['kmeans_clusters']
-
-            conservation = []
             for k in cluster_sizes:
-                pair_sets = np.empty(10, dtype=object)
-                for repeat in range(10):
-                    index_pairs = []
+                print 'k= :', k
+                index_pairs = defaultdict(int)
+                for repeat in range(2):
                     km = KMeans(n_clusters=k)
                     km.fit(self.data)
                     l = km.labels_
                     for i in range(k):
-                        index_pairs.append(frozenset(itertools.combinations(np.where(l==i)[0].tolist(), 2)))
-                    pair_sets[repeat] = frozenset(index_pairs)
-
-                intersections = np.array([len(x.intersection(y)) for x,y in pair_sets])
-                set_sizes = np.array([len(x) for x in pair_sets])
-                conservation.append((intersections.mean() / set_sizes.mean))
+                        pairs = set(itertools.combinations(np.where(l==i)[0].tolist(), 2))
+                        for pair in pairs:
+                            index_pairs.__getitem__(pair)
+                            index_pairs[pair] += 1
+                conservation.append(sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2)))
             print conservation
                 
         
         km = KMeans(n_clusters=config['kmeans_clusters'])
         km.fit(self.data)
 
-        return km.labels_, km.cluster_centers_
+        return km.labels_, km.cluster_centers_, conservation
     """
     def kmeans(self, data, n=config['kmeans_clusters'], axis=0):
 

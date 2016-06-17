@@ -26,13 +26,13 @@ gcdf.columns = track.index
 targets = np.array(['blood:eo', 'blood:ba', 'blood:ba', 'blood:eo', 'blood:hgb', 'blood:ly', 'blood:mch', 'blood:mchc', 'blood:mcv', 'blood:mo', 'blood:mpv', 'blood:ne', 'blood:plt', 'blood:rbc', 'blood:wbc', 'morning:Pulse', 'morning:Sleepquality', 'morning:Soreness', 'panas:fatigue', 'prevevening:Alcohol', 'prevevening:Guthealth', 'prevevening:Howmuchdidtinnitusbotheryoutoday?', 'prevevening:Psoriasisseverity', 'prevevening:Stress', 'prevevening:Timespentoutdoors', 'sameevening:Alcohol', 'sameevening:Guthealth', 'sameevening:Howmuchdidtinnitusbotheryoutoday?', 'sameevening:Psoriasisseverity', 'sameevening:Stress', 'sameevening:Timespentoutdoors', 'weather:precip', 'weather:temphi', 'weather:templo', 'weight', 'zeo:timeInDeep', 'zeo:timeInLight', 'zeo:timeInRem', 'zeo:totalZ'])
 
 kmeans_assignments = Representation(gc.data, 'kmeans').getRepresentation()
-cluster_labels = ['c'+str(i) for i in range(kmeans_assignments[1].shape[0])]
-cluster_df = pd.DataFrame(data=kmeans_assignments[1], index=cluster_labels, columns=track.index)
+#cluster_labels = ['c'+str(i) for i in range(kmeans_assignments[1].shape[0])]
+#cluster_df = pd.DataFrame(data=kmeans_assignments[1], index=cluster_labels, columns=track.index)
 
 #results = associate(gcdf, track, targets2=targets, outpath='../results/')
 #pickle.dump(results, open('../results/genewise_spearman_correlation_p_values.p', 'wb'))
 
-cluster_results = associate(cluster_df, track, targets2=targets, outpath='../results/k115_')
+#cluster_results = associate(cluster_df, track, targets2=targets, outpath='../results/k115_')
 
 #sleep = track.loc[:,('zeo:timeInLight','zeo:timeInDeep','zeo:timeInRem')].as_matrix()
 #sleep = np.nan_to_num(sleep)
