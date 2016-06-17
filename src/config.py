@@ -11,5 +11,6 @@ config = dict(
     clean_components=3,
     clean_data=True,
     cca_reg=0.0001,
-    view_pca_plots=False
+    view_pca_plots=False,
+    transpose_data=False
 )

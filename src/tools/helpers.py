@@ -1,3 +1,8 @@
+from collections import defaultdict
+from sklearn.cluster import KMeans
+import itertools
+from pickle import dump, load
+import numpy as np
 def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p'):
     num_clusters = np.bincount(cluster_labels).size
     cluster_dict = {}
@@ -11,8 +16,8 @@ def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p
     #sio.savemat(savename, cluster_dict)
 
 def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot'):
-    Returns subplot of data plotted over the given axes
-    TODO: make it return subplots so we dont need to use new figures each time
+    #Returns subplot of data plotted over the given axes
+    #TODO: make it return subplots so we dont need to use new figures each time
     fig = plt.figure()
     x_vals = data[:, x]
     y_vals = data[:, y]
@@ -46,7 +51,7 @@ def benjamini(x, p):
     significant = np.empty(x.size, dtype=bool)
     for i in range(x.size):
         significant[i] = x[i] < (i+1) * p
-return significant
+    return significant
 
 def label_coloring(labels):
     """
@@ -132,23 +137,26 @@ def associate(data1, data2, targets1=None, targets2=None, outpath=''):
             output.loc[i,j] = p
         savepath = outpath+j
         QQPlot(output[j].as_matrix(), savename=savepath)
-        
+
     return output
 
-def check_k_range(data, cluster_sizes, savename):
+def check_k_range(data, cluster_sizes, iterations, savename):
     for k in cluster_sizes:
         print 'k= :', k
         index_pairs = defaultdict(int)
-        for repeat in range(2):
-        km = KMeans(n_clusters=k)
-        km.fit(data)
-        l = km.labels_
-        for i in range(k):
-            pairs = set(itertools.combinations(np.where(l==i)[0].tolist(), 2))
-            for pair in pairs:
-                index_pairs.__getitem__(pair)
-                index_pairs[pair] += 1
-                conservation.append(sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2)))
+        conservation = []
+        for repeat in range(iterations):
+            km = KMeans(n_clusters=k)
+            km.fit(data)
+            l = km.labels_
+            for i in range(k):
+                pairs = set(itertools.combinations(np.where(l==i)[0].tolist(), 2))
+                for pair in pairs:
+                    index_pairs.__getitem__(pair)
+                    index_pairs[pair] += 1
+        conserved = sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2))
+        print conserved
+        conservation.append(conserved)
 
     dump(open(savename, 'wb'))
     print conservation
