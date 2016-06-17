@@ -32,14 +32,14 @@ class ClusterPipeline:
     def run_pipeline(self):
         if self.rep_type == 'pca':
             view1_loadings = self.learn_loadings(self.view1, 'pca')
-            view2_loadings = self.learn_loadings(self.view2, 'pca')
+            # view2_loadings = self.learn_loadings(self.view2, 'pca')
         elif self.rep_type == 'cca':
             if self.view1.shape[1] == self.view2.shape[1] + 1:
                 loadings = self.learn_loadings(self.view1[:, 1:], 'cca', view2=self.view2)
             else:
                 loadings = self.learn_loadings(self.view1, 'cca', view2=self.view2)
             view1_loadings = loadings[0]
-            view2_loadings = loadings[1]
+            # view2_loadings = loadings[1]
         clusters, centers = Representation(view1_loadings, 'kmeans', scale=False).getRepresentation()
         cluster_dict = self.process_clusters(clusters, centers)
         return cluster_dict
