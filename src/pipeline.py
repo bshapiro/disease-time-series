@@ -30,7 +30,7 @@ class ClusterPipeline:
         self.genes = genes
 
     def run_pipeline(self):
-        if self.reptype == 'pca':
+        if self.rep_type == 'pca':
             view1_loadings = self.learn_loadings(self.view1, 'pca')
             view2_loadings = self.learn_loadings(self.view2, 'pca')
         elif self.rep_type == 'cca':
@@ -58,7 +58,7 @@ class ClusterPipeline:
         U = svd_results[0]
         S_vector = svd_results[1]
         # V = svd _results[2]
-        S = np.zerosd((view_dim1, view_dim1), dtype=float)
+        S = np.zeros((view_dim1, view_dim1), dtype=float)
         S[:view_dim1, :view_dim1] = np.diag(S_vector)
         svd_loadings = np.dot(U, S)
         return svd_loadings[:, :config['pca_components']]
@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     print "Running cluster pipeline..."
     cluster_pipeline = ClusterPipeline(config['representation'], view1, view2, genes)
-    clusters, = cluster_pipeline.run_pipeline()
+    clusters = cluster_pipeline.run_pipeline()
 
     print "Dumping clusters for enrichment analysis..."
     dump(clusters, open(options.dataset + '_' + config['representation'] + '_' + identifying_string + '.dump', 'w'))
