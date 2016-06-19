@@ -174,3 +174,14 @@ def check_k_range(data, cluster_sizes, iterations, savename):
 
     pickle.dump(open(savename, 'wb'))
     print conservation
+
+
+def make_config_string(config):
+    string = ''
+    for key, value in config.items():
+        if not isinstance(value, float):
+            string += key + '=' + str(value) + ','
+        else:
+            string += key + '=' + '{:.2e}'.format(value) + ','
+    string = string[:-1]
+    return string

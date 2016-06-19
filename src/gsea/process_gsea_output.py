@@ -4,6 +4,7 @@ from optparse import OptionParser
 
 def get_sigs(output_directory, p_value_threshold=0.05, fdr_threshold=0.1):
     sig_dict = {}
+    print "Getting significant enrichments from", output_directory
     files = glob(output_directory + "*")
     for filename in files:
         f = open(filename)
@@ -15,8 +16,9 @@ def get_sigs(output_directory, p_value_threshold=0.05, fdr_threshold=0.1):
             fdr = items[7]
             if float(fdr) < float(fdr_threshold) and float(p_value) < float(p_value_threshold):
                 significant.append(items)
+        filename_suffix = filename.split('/')[-1]
         if significant != []:
-            sig_dict[filename] = significant
+            sig_dict[filename_suffix] = significant
     return sig_dict
 
 

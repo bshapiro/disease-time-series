@@ -3,7 +3,7 @@ from GP import fit_gp_with_priors
 import numpy as np
 import sys
 from pickle import load, dump
-from config import config
+from config import config, param
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 from sklearn.linear_model import LinearRegression
@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import pdb
 from gsea.run_enrichment import run_enrichment
 from gsea.process_gsea_output import get_sigs
+from tools.helpers import make_config_string
+import os
 
 parser = OptionParser()
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
@@ -31,13 +33,13 @@ class ClusterPipeline:
 
     def run_pipeline(self):
         if self.rep_type == 'pca':
-            view1_loadings = self.learn_loadings(self.view1, 'pca')
+            view1_loadings = self.learn_loadings(self.view1)
             # view2_loadings = self.learn_loadings(self.view2, 'pca')
         elif self.rep_type == 'cca':
             if self.view1.shape[1] == self.view2.shape[1] + 1:
-                loadings = self.learn_loadings(self.view1[:, 1:], 'cca', view2=self.view2)
+                loadings = self.learn_loadings(self.view1[:, 1:], view2=self.view2)
             else:
-                loadings = self.learn_loadings(self.view1, 'cca', view2=self.view2)
+                loadings = self.learn_loadings(self.view1, view2=self.view2)
             view1_loadings = loadings[0]
             # view2_loadings = loadings[1]
         clusters, centers = Representation(view1_loadings, 'kmeans', scale=False).getRepresentation()
@@ -61,7 +63,7 @@ class ClusterPipeline:
         S = np.zeros((view_dim1, view_dim1), dtype=float)
         S[:view_dim1, :view_dim1] = np.diag(S_vector)
         svd_loadings = np.dot(U, S)
-        return svd_loadings[:, :config['pca_components']]
+        return svd_loadings[:, :param['components']]
 
     def learn_cca_loadings(self, view1, view2):
         cca = Representation(view1, 'cca', axis=0, data2=view2)
@@ -89,49 +91,67 @@ class GPPipeline:
         self.genes = genes
         self.num_timesteps = len(timesteps)
         self.timesteps = timesteps
+        self.dir = config['project_root'] + 'data/trajectories/'
+        self.dir += 'raw_'
+        self.dir += make_config_string(param)
+        try:
+            os.mkdir(self.dir)
+        except:
+            pass
 
     def run_pipeline(self, clusters, sig_bps):
-        cluster_time_series = self.generate_time_series(clusters)
-        sig_cluster_time_series = self.generate_bp_sigs(clusters, sig_bps)
-        pca_sig_clusters = ['c61', 'c45', 'c30']
-        cca_sig_clusters = ['c45']
-        for cluster_name, trajectories in cluster_time_series.items():
-            if cluster_name in pca_sig_clusters:
-                print cluster_name
-                print "Number of genes:", len(clusters[cluster_name])
+        cluster_time_series = self.generate_time_series(clusters, sig_bps)
+        for cluster_name, bp_dict in cluster_time_series.items():
+            for bp_name, trajectories in bp_dict.items():
+                bp_name = bp_name.strip()
+                print cluster_name, bp_name
+                print "Number of genes:", len(trajectories)
                 self.plot_avg_trajectory(timesteps, trajectories)
+                plt.savefig(self.dir + '/' + cluster_name + '_' + bp_name + '_avg.png')
                 self.plot_all_trajectories(timesteps, trajectories)
-                self.plot_sig_trajectories(timesteps, trajectories)
+                plt.savefig(self.dir + '/' + cluster_name + '_' + bp_name + '_all.png')
                 #fit_gp_with_priors(trajectory[0], self.timesteps)
 
     def plot_avg_trajectory(self, timesteps, trajectories):
         avg_trajectory = sum(trajectories) / len(trajectories)
         plt.clf()
         plt.plot(timesteps, avg_trajectory)
-        plt.show()
-        pdb.set_trace()
+        # plt.show()
+        # pdb.set_trace()
 
     def plot_all_trajectories(self, timesteps, trajectories):
         plt.clf()
         trajectories = scale(trajectories)
         for trajectory in trajectories:
             plt.plot(timesteps, trajectory)
-        plt.show()
-        pdb.set_trace()
+        # plt.show()
+        # pdb.set_trace()
 
-    def plot_sig_trajectories(self, timesteps):
-        pass
-
-    def generate_time_series(self, cluster_dict):
-        pdb.set_trace()
-        cluster_time_series = {}
+    def generate_time_series(self, cluster_dict, sig_bp_dict):
+        new_cluster_dict = {}
         for cluster_name, cluster_genes in cluster_dict.items():
-            vectors = []
-            for gene in cluster_genes:
-                index = self.genes.index(gene)
-                vectors.append(self.time_series[index, :])
-            cluster_time_series[cluster_name] = scale(vectors)
-        return cluster_time_series
+            gsea_filename = config['gsea_file_prefix'] + cluster_name
+            if sig_bp_dict.get(gsea_filename) is not None:
+
+                cluster_time_series = {}
+                vectors = []
+                for gene in cluster_genes:
+                    index = self.genes.index(gene)
+                    vectors.append(self.time_series[index, :])
+                cluster_time_series['TOTAL'] = vectors  # TODO: scale?
+
+                for bp in sig_bp_dict.get(config['gsea_file_prefix'] + cluster_name):
+                    bp_genes = bp[-1].split(',')
+                    bp_name = bp[0]
+                    bp_vectors = []
+                    for gene in bp_genes:
+                        index = self.genes.index(gene)
+                        bp_vectors.append(self.time_series[index, :])
+                    cluster_time_series[bp_name] = bp_vectors  # TODO: scale?
+
+                new_cluster_dict[cluster_name] = cluster_time_series
+
+        return new_cluster_dict
 
 
 class BasicPipeline:
@@ -170,7 +190,7 @@ class BasicPipeline:
         view = scale(self.view)
         U, S, V = Representation(view, 'svd').getRepresentation()
         new_view = np.ndarray(view.shape)
-        loadings = U[:, 0:config['clean_components']]
+        loadings = U[:, 0:param['clean_components']]
         for i in range(view.shape[1]):
             feature_vector = view[:, i]
             model = LinearRegression(fit_intercept=False)
@@ -193,7 +213,8 @@ if __name__ == "__main__":
     elif options.dataset is None:
         sys.exit('Please supply a dataset to use.')
 
-    identifying_string = 'clusters_cleaned=' + str(config['clean_components']) + ',components=' + str(config['pca_components']) + ',cca_reg=' + '{:.0e}'.format(config['cca_reg'])
+    param['dataset'] = options.dataset
+    identifying_string = make_config_string(param)
 
     raw_view1 = np.transpose(load(open(options.directory + files[0])))
     raw_view2 = np.transpose(load(open(options.directory + files[1])))
@@ -204,7 +225,7 @@ if __name__ == "__main__":
 
     if config['view_pca_plots']:
         print "Displaying PCA results on uncleaned data..."
-        if not config['time_transform']:
+        if not param['time_transform']:
             basic_view1.pca_view()
             basic_view2.pca_view()
         else:
@@ -226,23 +247,25 @@ if __name__ == "__main__":
             basic_view1.pca_view_diff()
             basic_view2.pca_view_diff()
 
-    print "Running cluster pipeline..."
-    cluster_pipeline = ClusterPipeline(config['representation'], view1, view2, genes)
-    clusters = cluster_pipeline.run_pipeline()
+    if config['run_clustering']:
+        print "Running cluster pipeline..."
+        cluster_pipeline = ClusterPipeline(param['representation'], view1, view2, genes)
+        clusters = cluster_pipeline.run_pipeline()
 
-    print "Dumping clusters for enrichment analysis..."
-    dump(clusters, open(options.dataset + '_' + config['representation'] + '_' + identifying_string + '.dump', 'w'))
+        print "Dumping clusters for enrichment analysis..."
+        dump(clusters, open(identifying_string + '.dump', 'w'))
+    else:
+        print "Loading clusters for enrichment analysis..."
+        clusters = load(open(identifying_string + '.dump'))
 
-    print "Loading clusters for enrichment analysis..."
-    clusters = load(open(options.dataset + '_' + config['representation'] + '_' + identifying_string + '.dump'))
-
-    print "Running gene set enrichment analyses..."
-    run_enrichment(clusters, genes, config['project_root'] + 'src/gsea/GO-BP.gmt', config['project_root'] + 'data/gsea_output/' + identifying_string + '_' + config['representation'] + '/')
+    if config['run_enrichment']:
+        print "Running gene set enrichment analyses..."
+        run_enrichment(clusters, genes, config['project_root'] + 'src/gsea/GO-BP.gmt', config['project_root'] + 'data/gsea_output/' + identifying_string + '/')
 
     print "Processing GSEA output into significant enrichments..."
     output_dir = config['project_root'] + 'data/gsea_output/' + identifying_string + '/'
-    sig_bps = get_sigs(output_dir, 0.05, 0.1)
+    sig_bps = get_sigs(output_dir, param['gsea_p_value_thresh'], param['gsea_fdr_thresh'])
 
     print "Running GP pipeline..."
-    gp_pipeline = GPPipeline(view1, genes, timesteps)
+    gp_pipeline = GPPipeline(raw_view1, genes, timesteps)
     gp_pipeline.run_pipeline(clusters, sig_bps)
