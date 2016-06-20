@@ -220,6 +220,7 @@ def check_k_range(data, cluster_sizes, iterations, savename):
     print conservation
 
 
+<<<<<<< HEAD
 def iterative_clean(p, clean_components, clusters=3, transpose=False,
                     odir='./'):
     """
@@ -243,3 +244,14 @@ def iterative_clean(p, clean_components, clusters=3, transpose=False,
         #kmeans.fit(clean)
 
         #plot_2D(pca[0], kmeans.labels_, title=plt_title, savename=odir)
+=======
+def make_config_string(config):
+    string = ''
+    for key, value in config.items():
+        if not isinstance(value, float):
+            string += key + '=' + str(value) + ','
+        else:
+            string += key + '=' + '{:.2e}'.format(value) + ','
+    string = string[:-1]
+    return string
+>>>>>>> 005f85ae8ff3f4b4e7ec5e75e1fcb206a8bab7e2
