@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import pickle
-from config import config
+from config import config, param
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 import pandas as pd
@@ -149,7 +149,7 @@ class Preprocessing:
         returns matrix of cleaned data
         """
         if components is None:
-            components = config['clean_components']
+            components = param['clean_components']
         if type(components) is int:
             components = np.arange(components)
 
