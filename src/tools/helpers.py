@@ -1,3 +1,4 @@
+import addpath
 from collections import defaultdict
 from sklearn.cluster import KMeans
 import itertools
@@ -6,11 +7,14 @@ import matplotlib.pyplot as plt
 import pickle
 import sys
 import pandas as pd
-from sklearn.linear_model import LinearRegression
 import scipy as sp
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import scale
+from src.representation import Representation
 
 
-def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p'):
+def export_clusters(cluster_labels, gene_set,
+                    savename='../out/clustered_genes.p'):
     num_clusters = np.bincount(cluster_labels).size
     cluster_dict = {}
     for i in range(num_clusters):
@@ -20,24 +24,59 @@ def export_clusters(cluster_labels, gene_set, savename='../out/clustered_genes.p
             cluster_dict[cluster_label] = genes
 
     pickle.dump(cluster_dict, open(savename, 'w'))
-    #sio.savemat(savename, cluster_dict)
+    # sio.savemat(savename, cluster_dict)
 
 
-def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot'):
-    #Returns subplot of data plotted over the given axes
-    #TODO: make it return subplots so we dont need to use new figures each time
+def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot', savename='plot'):
     fig = plt.figure()
     x_vals = data[:, x]
     y_vals = data[:, y]
     colors = label_coloring(color_labels)
     if colors is not None:
-        plt.scatter(x_vals, y_vals, figure=fig, s=100, c=colors)
+        plt.scatter(x_vals, y_vals, figure=fig, s=50, c=colors)
     else:
-        plt.scatter(x_vals, y_vals, figure=fig, s=100)
+        plt.scatter(x_vals, y_vals, figure=fig, s=50)
+
     plt.title(title, figure=fig)
     plt.xlabel(xlabel, figure=fig)
     plt.ylabel(ylabel, figure=fig)
+    savename = savename + title
+    plt.savefig(savename)
+    plt.close()
+    return
 
+def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', savename='plot'):
+    """
+    Plot over PCs (1st and 2nd) coloring based on kmeans clustering
+    """
+    pca = Representation(data, 'pca').getRepresentation()
+    kmeans = KMeans(n_clusters=k)
+    kmeans.fit(data)
+    fig = plt.figure()
+    plt.title(title, figure=fig)
+
+    ax1 = fig.add_subplot(211)
+    x_vals = pca[0][:, pc1]
+    y_vals = pca[0][:, pc2]
+    colors = label_coloring(kmeans.labels_)
+    if colors is not None:
+        ax1.scatter(x_vals, y_vals, s=50, c=colors)
+    else:
+        ax1.scatter(x_vals, y_vals, s=50)
+
+    # ax1.title(plttitle)
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
+
+    ax2 = fig.add_subplot(212)
+    ax2.plot(pca[2])
+    ax2.set_xlabel('PC')
+    ax2.set_ylabel('Explained Variance Ratio')
+
+    savename = savename + title
+    plt.savefig(savename)
+    plt.close()
+    return
 
 def QQPlot(observed_p, savename):
     # make the QQ plot, borrowed from Princy's code demonstrating QQ plots
@@ -53,6 +92,7 @@ def QQPlot(observed_p, savename):
     ax.set_ylabel('Observed')
     ax.set_title(savename)
     plt.savefig(savename)
+    plt.close()
 
 
 def benjamini(x, p):
@@ -101,7 +141,8 @@ def regress_out(self, ind, X=None, axis=None):
     if X is None:
         X = self.X
     if axis is None:
-        # try and figure out what axis based on the dimensions of independent variable
+        # try and figure out what axis based on the
+        # dimensions of independent variable
         n = ind.shape[0]
         if X.shape[0] == X.shape[1]:
             # this is an ambigous case
@@ -133,7 +174,8 @@ def associate(data1, data2, targets1=None, targets2=None, outpath=''):
     data1 (ixj)and data2(nxm) are DataFrames
     targets are the columns of data 2 that we want to check an
     associationg for with the rows of data1
-    returns an ixm dataframe with benjamini hochberg corrected p values of spearman correlations
+    returns an ixm dataframe with benjamini hochberg corrected p values of
+    spearman correlations
     """
     print 'Finding Associations...'
     if targets1 is None:
@@ -141,12 +183,14 @@ def associate(data1, data2, targets1=None, targets2=None, outpath=''):
     if targets2 is None:
         targets2 = data2.axes[1]
 
-    output = pd.DataFrame(data=np.empty((targets1.size, targets2.size)), index=targets1, columns=targets2)
+    output = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
+                          index=targets1, columns=targets2)
 
     for j in targets2:
         for i in targets1:
             notnan = data2[(~np.isnan(data2[j].astype(float)))].index
-            r, p = sp.stats.spearmanr(data1.loc[i, notnan].as_matrix(), data2.loc[notnan, j].as_matrix())
+            r, p = sp.stats.spearmanr(data1.loc[i, notnan].as_matrix(),
+                                      data2.loc[notnan, j].as_matrix())
             output.loc[i, j] = p
         savepath = outpath+j
         QQPlot(output[j].as_matrix(), savename=savepath)
@@ -174,3 +218,28 @@ def check_k_range(data, cluster_sizes, iterations, savename):
 
     pickle.dump(open(savename, 'wb'))
     print conservation
+
+
+def iterative_clean(p, clean_components, clusters=3, transpose=False,
+                    odir='./'):
+    """
+    p is a preprocessing object,
+    clean components is the number of PCs we want to remove
+    clusters is the number of clusters to label datapoints on PC plot with
+    scales the data before runnning it through PCPlot
+    """
+    for i in range(clean_components+1):
+        c = np.arange(i)
+        print 'Cleaning PCs: ', c
+        clean = p.clean(components=c, update_data=False)
+        if transpose:
+            clean = clean.T
+        clean = scale(clean)
+
+        plt_title = "RemovedPCs:" + str(c)
+        PCPlot(clean, k=3, xlabel='PC-1', ylabel='PC-2', title=plt_title, savename=odir)
+        #pca = Representation(clean, 'pca').getRepresentation()
+        #kmeans = KMeans(n_clusters=clusters)
+        #kmeans.fit(clean)
+
+        #plot_2D(pca[0], kmeans.labels_, title=plt_title, savename=odir)
