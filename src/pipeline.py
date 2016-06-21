@@ -1,9 +1,9 @@
 from representation import Representation
-from GP import fit_gp_with_priors
+# from GP import fit_gp_with_priors
 import numpy as np
 import sys
 from pickle import load, dump
-from config import config, param
+from config import config, param, get_org_params
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 from sklearn.linear_model import LinearRegression
@@ -92,8 +92,7 @@ class GPPipeline:
         self.num_timesteps = len(timesteps)
         self.timesteps = timesteps
         self.dir = config['project_root'] + 'data/trajectories/'
-        self.dir += 'raw_'
-        self.dir += make_config_string(param)
+        self.dir += make_config_string(param, get_org_params())
         try:
             os.mkdir(self.dir)
         except:
@@ -113,7 +112,7 @@ class GPPipeline:
                 #fit_gp_with_priors(trajectory[0], self.timesteps)
 
     def plot_avg_trajectory(self, timesteps, trajectories):
-        avg_trajectory = sum(trajectories) / len(trajectories)
+        avg_trajectory = (sum(trajectories)) / float(len(trajectories))
         plt.clf()
         plt.plot(timesteps, avg_trajectory)
         # plt.show()
@@ -121,7 +120,6 @@ class GPPipeline:
 
     def plot_all_trajectories(self, timesteps, trajectories):
         plt.clf()
-        trajectories = scale(trajectories)
         for trajectory in trajectories:
             plt.plot(timesteps, trajectory)
         # plt.show()
@@ -214,14 +212,18 @@ if __name__ == "__main__":
         sys.exit('Please supply a dataset to use.')
 
     param['dataset'] = options.dataset
-    identifying_string = make_config_string(param)
+    identifying_string = make_config_string(param, get_org_params())
 
     raw_view1 = np.transpose(load(open(options.directory + files[0])))
     raw_view2 = np.transpose(load(open(options.directory + files[1])))
     genes = load(open(options.directory + files[2]))
 
-    basic_view1 = BasicPipeline(np.log2(raw_view1 + 2), genes)
-    basic_view2 = BasicPipeline(np.log2(raw_view2 + 2), genes)
+    if param['log_transform']:
+        basic_view1 = BasicPipeline(np.log2(raw_view1 + 2), genes)
+        basic_view2 = BasicPipeline(np.log2(raw_view2 + 2), genes)
+    else:
+        basic_view1 = BasicPipeline(raw_view1, genes)
+        basic_view2 = BasicPipeline(raw_view2, genes)
 
     if config['view_pca_plots']:
         print "Displaying PCA results on uncleaned data..."
@@ -233,10 +235,11 @@ if __name__ == "__main__":
             basic_view2.pca_view_diff()
 
     print "Cleaning data..."
-    view1 = basic_view1.clean()
-    view2 = basic_view2.clean()
-    basic_view1.view = view1
-    basic_view2.view = view2
+    if param['clean_data']:
+        view1 = basic_view1.clean()
+        view2 = basic_view2.clean()
+        basic_view1.view = view1
+        basic_view2.view = view2
 
     if config['view_pca_plots']:
         print "Displaying PCA results on cleaned data..."
@@ -253,10 +256,10 @@ if __name__ == "__main__":
         clusters = cluster_pipeline.run_pipeline()
 
         print "Dumping clusters for enrichment analysis..."
-        dump(clusters, open(identifying_string + '.dump', 'w'))
+        dump(clusters, open('dumps/' + identifying_string + '.dump', 'w'))
     else:
         print "Loading clusters for enrichment analysis..."
-        clusters = load(open(identifying_string + '.dump'))
+        clusters = load(open('dumps/' + identifying_string + '.dump'))
 
     if config['run_enrichment']:
         print "Running gene set enrichment analyses..."
@@ -267,5 +270,8 @@ if __name__ == "__main__":
     sig_bps = get_sigs(output_dir, param['gsea_p_value_thresh'], param['gsea_fdr_thresh'])
 
     print "Running GP pipeline..."
-    gp_pipeline = GPPipeline(raw_view1, genes, timesteps)
+    if config['trajectories'] == 'cleaned':
+        gp_pipeline = GPPipeline(view1, genes, timesteps)
+    elif config['trajectories'] == 'raw':
+        gp_pipeline = GPPipeline(raw_view1, genes, timesteps)
     gp_pipeline.run_pipeline(clusters, sig_bps)
