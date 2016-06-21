@@ -176,9 +176,10 @@ def check_k_range(data, cluster_sizes, iterations, savename):
     print conservation
 
 
-def make_config_string(config):
+def make_config_string(config, org_params):
     string = ''
-    for key, value in config.items():
+    for key in org_params:
+        value = config[key]
         if not isinstance(value, float):
             string += key + '=' + str(value) + ','
         else:
