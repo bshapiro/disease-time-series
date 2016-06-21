@@ -5,7 +5,8 @@ config = dict(
     run_enrichment=True,
     run_clustering=True,
     gsea_file_prefix='_GO-BP_',
-    trajectories='cleaned'
+    trajectories='cleaned',
+    filter_include_nan=True
 )
 
 
