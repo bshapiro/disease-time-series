@@ -314,9 +314,10 @@ def iterative_clean(p, clean_components, clusters=3, transpose=False,
         #plot_2D(pca[0], kmeans.labels_, title=plt_title, savename=odir)
 
 
-def make_config_string(config):
+def make_config_string(config, org_params):
     string = ''
-    for key, value in config.items():
+    for key in org_params:
+        value = config[key]
         if not isinstance(value, float):
             string += key + '=' + str(value) + ','
         else:
