@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import pickle
 import sys
 import pandas as pd
@@ -11,6 +12,7 @@ import scipy as sp
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
 from src.representation import Representation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def export_clusters(cluster_labels, gene_set,
@@ -27,7 +29,8 @@ def export_clusters(cluster_labels, gene_set,
     # sio.savemat(savename, cluster_dict)
 
 
-def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-Dimensional Plot', savename='plot'):
+def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y',
+            title='2-Dimensional Plot', savename='plot'):
     fig = plt.figure()
     x_vals = data[:, x]
     y_vals = data[:, y]
@@ -45,7 +48,8 @@ def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-
     plt.close()
     return
 
-def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', savename='plot'):
+
+def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', odir='plot'):
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
     """
@@ -59,12 +63,8 @@ def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot
     x_vals = pca[0][:, pc1]
     y_vals = pca[0][:, pc2]
     colors = label_coloring(kmeans.labels_)
-    if colors is not None:
-        ax1.scatter(x_vals, y_vals, s=50, c=colors)
-    else:
-        ax1.scatter(x_vals, y_vals, s=50)
-
-    # ax1.title(plttitle)
+    ax1.scatter(x_vals, y_vals, s=50, c=colors)
+    ax1.scatter(x_vals, y_vals, s=50)
     ax1.set_xlabel(xlabel)
     ax1.set_ylabel(ylabel)
 
@@ -77,6 +77,62 @@ def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot
     plt.savefig(savename)
     plt.close()
     return
+
+def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', odir='./'):
+    """
+    Plot over PCs (1st and 2nd) coloring based on kmeans clustering
+    """
+    pca = Representation(data, 'pca').getRepresentation()
+    fig, ax = plt.subplots(1, 2, figsize=(15,5))
+    fig.suptitle(title)
+
+    x_vals = pca[0][:, pc1]
+    y_vals = pca[0][:, pc2]
+    pcplot = ax[0].scatter(x_vals, y_vals, s=50, c=labels)
+    ax[0].set_xlabel(xlabel)
+    ax[0].set_ylabel(ylabel)
+
+    div = make_axes_locatable(ax[0])
+    cax = div.append_axes("right", size="15%", pad=0.05)
+    cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0,10,.1), format="%.2g")
+
+    ax[1].plot(pca[2])
+    ax[1].set_xlabel('PC')
+    ax[1].set_ylabel('Explained Variance Ratio')
+
+    savename = odir + title
+    plt.tight_layout()
+    #plt.show()
+    plt.savefig(savename)
+    plt.close()
+    return
+
+
+def HeatMap(data, row_labels, col_labels, title='Heat Map', odir='./'):
+    fig, ax = plt.subplots(figsize=(15,15))
+    heatmap = plt.pcolor(data)
+    fig.suptitle(title)
+    ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
+    ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+
+    """
+    for y in range(data.shape[0]):
+        for x in range(data.shape[1]):
+            plt.text(x + 0.5, y + 0.5, '%.4f' % data[y, x],
+                     horizontalalignment='center',
+                     verticalalignment='center',
+                     )
+    """
+    ax.set_xticklabels(col_labels, rotation='vertical', minor=False)
+    ax.set_yticklabels(row_labels, minor=False)
+    plt.colorbar()
+    plt.tight_layout()
+    #plt.show()
+    plt.savefig(odir+title)
+    plt.close()
+
 
 def QQPlot(observed_p, savename):
     # make the QQ plot, borrowed from Princy's code demonstrating QQ plots
@@ -169,7 +225,7 @@ def regress_out(self, ind, X=None, axis=None):
     return new_data, linreg
 
 
-def associate(data1, data2, targets1=None, targets2=None, outpath=''):
+def associate(data1, data2, targets1=None, targets2=None, method='spearman', outpath=''):
     """
     data1 (ixj)and data2(nxm) are DataFrames
     targets are the columns of data 2 that we want to check an
@@ -183,19 +239,29 @@ def associate(data1, data2, targets1=None, targets2=None, outpath=''):
     if targets2 is None:
         targets2 = data2.axes[1]
 
-    output = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
+    pvals = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
                           index=targets1, columns=targets2)
+    corr = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
+                          index=targets1, columns=targets2)
+
+    if method is 'spearman':
+        method = sp.stats.spearmanr
+    if method is 'pearson':
+        method = sp.stats.pearsonr
 
     for j in targets2:
         for i in targets1:
             notnan = data2[(~np.isnan(data2[j].astype(float)))].index
-            r, p = sp.stats.spearmanr(data1.loc[i, notnan].as_matrix(),
+            r, p = method(data1.loc[i, notnan].as_matrix(),
                                       data2.loc[notnan, j].as_matrix())
-            output.loc[i, j] = p
+            pvals.loc[i, j] = p
+            corr.loc[i, j] = r
         savepath = outpath+j
-        QQPlot(output[j].as_matrix(), savename=savepath)
+        QQPlot(pvals[j].as_matrix(), savename=savepath)
+    savename = outpath + '_correlations.p'
+    pickle.dump([corr, pvals], open(savename, 'wb'))
 
-    return output
+    return corr, pvals
 
 
 def check_k_range(data, cluster_sizes, iterations, savename):
@@ -203,7 +269,7 @@ def check_k_range(data, cluster_sizes, iterations, savename):
         print 'k= :', k
         index_pairs = defaultdict(int)
         conservation = []
-        for repeat in range(iterations):
+        for repeat in range(2):
             km = KMeans(n_clusters=k)
             km.fit(data)
             l = km.labels_
@@ -212,17 +278,18 @@ def check_k_range(data, cluster_sizes, iterations, savename):
                 for pair in pairs:
                     index_pairs.__getitem__(pair)
                     index_pairs[pair] += 1
-        conserved = sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2))
+        #conserved = sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2))
+        conserved = sum([x >= 2 for x in index_pairs.values()]) / float(len(index_pairs.keys()))
         print conserved
         conservation.append(conserved)
 
-    pickle.dump(open(savename, 'wb'))
+    pickle.dump(conservation, open(savename, 'wb'))
     print conservation
+    return conservation
 
 
-<<<<<<< HEAD
 def iterative_clean(p, clean_components, clusters=3, transpose=False,
-                    odir='./'):
+                    odir='./', title='', pltfunc=PCPlot, **kwargs):
     """
     p is a preprocessing object,
     clean components is the number of PCs we want to remove
@@ -237,14 +304,16 @@ def iterative_clean(p, clean_components, clusters=3, transpose=False,
             clean = clean.T
         clean = scale(clean)
 
-        plt_title = "RemovedPCs:" + str(c)
-        PCPlot(clean, k=3, xlabel='PC-1', ylabel='PC-2', title=plt_title, savename=odir)
+        plt_title = title+"RemovedPCs:" + str(c)
+        pltfunc(data=clean, title=plt_title, **kwargs)
+        #PCPlot(clean, k=clusters, xlabel='PC-1', ylabel='PC-2', title=plt_title, savename=odir)
         #pca = Representation(clean, 'pca').getRepresentation()
         #kmeans = KMeans(n_clusters=clusters)
         #kmeans.fit(clean)
 
         #plot_2D(pca[0], kmeans.labels_, title=plt_title, savename=odir)
-=======
+
+
 def make_config_string(config):
     string = ''
     for key, value in config.items():
@@ -254,4 +323,3 @@ def make_config_string(config):
             string += key + '=' + '{:.2e}'.format(value) + ','
     string = string[:-1]
     return string
->>>>>>> 005f85ae8ff3f4b4e7ec5e75e1fcb206a8bab7e2
