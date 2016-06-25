@@ -1,4 +1,3 @@
-import addpath
 from collections import defaultdict
 from sklearn.cluster import KMeans
 import itertools
@@ -45,6 +44,7 @@ def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y', title='2-
     plt.close()
     return
 
+
 def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', savename='plot'):
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
@@ -77,6 +77,7 @@ def PCPlot(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot
     plt.savefig(savename)
     plt.close()
     return
+
 
 def QQPlot(observed_p, savename):
     # make the QQ plot, borrowed from Princy's code demonstrating QQ plots
