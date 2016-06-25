@@ -49,7 +49,7 @@ parser.add_option("--saveas", dest="saveas", default='pickle',
 class Preprocessing:
 
     def __init__(self, data, sample_labels=None, feature_labels=None,
-                 transpose=False, dtype=float, odir='./'):
+                 transpose=False, dtype=float, odir=''):
         """
         UPDATE
         Notes:
