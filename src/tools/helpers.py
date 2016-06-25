@@ -1,4 +1,3 @@
-import addpath
 from collections import defaultdict
 from sklearn.cluster import KMeans
 import itertools
@@ -11,6 +10,7 @@ import scipy as sp
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
 from src.representation import Representation
+# TODO: This import doesn't work.
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -269,13 +269,15 @@ def check_k_range(data, cluster_sizes, iterations, savename):
             km.fit(data)
             l = km.labels_
             for i in range(k):
-                pairs = set(itertools.combinations(np.where(l == i)[0].tolist(), 2))
+                pairs = set(itertools.combinations(np.where(l == i)
+                            [0].tolist(), 2))
                 for pair in pairs:
                     index_pairs.__getitem__(pair)
                     index_pairs[pair] += 1
         # conserved = sum(index_pairs.values()) /
         # float((len(index_pairs.keys()) * 2))
-        conserved = sum([x >= 2 for x in index_pairs.values()]) / float(len(index_pairs.keys()))
+        conserved = sum([x >= 2 for x in index_pairs.values()]) /\
+            float(len(index_pairs.keys()))
         print conserved
         conservation.append(conserved)
 

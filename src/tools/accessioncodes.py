@@ -14,9 +14,8 @@ class BioMartSearch:
 
 
 	def makedictionary(self):
-		dictionary = dict()
-		for entry in self.data:
-			dictionary[entry] = ''
+		print 'Prepping Dictionary...'
+		dictionary = {entry: '' for entry in self.data}
 		return dictionary
 
 
@@ -28,6 +27,7 @@ class BioMartSearch:
 		we could use
 		Returns a dictionary mapping accession codes to gene names
 		"""
+		print 'Searching Biomart...'
 		keys = self.dictionary.keys()
 		if n == -1:
 			n = len(keys)
@@ -37,10 +37,25 @@ class BioMartSearch:
 
 		pickle.dump(self.dictionary, open('gene_acc_to_gene_names.p', 'wb'))
 
+	def bulksearch(self, filt):
+		dkeys = self.dictionary.keys()
+		keys = [dkeys[i:i+200] for i in range(0, len(dkeys), 200)]
+		print len(keys), 'batches'
+		batch = 1
+		for keyset in keys:
+			print batch
+			batch += 1
+			response = self.dataset.search({
+			'filters' : { filt: keyset},
+			'attributes': self.attributes
+			})
+			self.dictionary.update({key: val for key, val in zip(keyset, response.text.split('\n'))})	
+
 	def singlesearch(self, accession_code):
 		"""
 		makes a single search
 		"""
+		print accession_code
 		response = np.empty(len(self.filters), dtype=object)
 		index = 0
 		# search each of the potential features

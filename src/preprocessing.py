@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression
 from representation import Representation
 
 parser = OptionParser()
-parser.add_option("--in_directory", dest="in_dir", default="./",
+parser.add_option("--in_directory", dest="in_dir", default="",
                   help="Directory to look for files, default curr directory")
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
                   help="Dataset, the file the the data matrix in it")
@@ -19,7 +19,7 @@ parser.add_option("--has_row_labels", dest="has_row_labels", default=False,
                   help="If True, first column of dataset file are labels")
 parser.add_option("--has_col_labels", dest="has_col_labels", default=False,
                   help="If True, first column of dataset file are labels")
-parser.add_option("transpose_data", dest="transpose", default=False,
+parser.add_option("--transpose_data", dest="transpose", default=False,
                   help="If True, tranpose the data matrix")
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
@@ -35,7 +35,7 @@ parser.add_option("--regress_cols", dest="regress_cols", default=None,
                   help="Regress data on columns of matrix")
 parser.add_option("--regress_rows", dest="regress_rows", default=None,
                   help="Regress data on rows of matrix")
-parser.add_option("--odir", dest="out_directory", default='./',
+parser.add_option("--odir", dest="out_directory", default='',
                   help="Output directory+prefix to prepend to any saved output"
                   )
 parser.add_option("--saveas", dest="saveas", default='pickle',
@@ -49,7 +49,7 @@ parser.add_option("--saveas", dest="saveas", default='pickle',
 class Preprocessing:
 
     def __init__(self, data, sample_labels=None, feature_labels=None,
-                 transpose=False, odir='./'):
+                 transpose=False, dtype=float, odir='./'):
         """
         UPDATE
         Notes:
@@ -62,7 +62,7 @@ class Preprocessing:
         pipeline use, e.g. thresholds, cleaned components, etc.
         """
         # self.data = self.load(data_source)
-        self.raw = data  # keep a copy of the raw data for reset
+        self.raw = data.astype(dtype)  # keep a copy of the raw data for reset
         self.raw_samples = sample_labels
         self.raw_features = feature_labels
 
@@ -235,8 +235,13 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
 
     if filetype == 'pickle':
         data = pickle.load(open(source))
-    else:
-        data = np.genfromtxt(source, comments='!', delimiter=filetype,
+    elif filetype == 'tsv':
+        print source, ' as tab seperated'
+        data = np.genfromtxt(source, comments='!', delimiter='\t',
+                             dtype=object)
+    elif filetype == 'csv':
+        print source, ' as column seperated'
+        data = np.genfromtxt(source, comments='!', delimiter=',',
                              dtype=object)
     # else:
     #    print >> sys.stderr, 'specify a valid filtype:',
@@ -261,12 +266,23 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
 if __name__ == "__main__":
 
     datapath = options.in_dir + options.dataset
+    print datapath
+
+    has_row_labels = False
+    has_row_labels = False
+
+    if options.has_row_labels == 'True':
+        has_row_labels = True
+
+    if options.has_col_labels == 'True':
+        has_col_labels = True
+
     data, row_labels, col_labels = load_file(datapath, options.filetype,
-                                             options.has_row_labels,
-                                             options.has_col_labels)
-    p = Preprocessing(options.data, options.has_row_labels,
-                      options.has_col_labels, options.transpose,
+                                             has_row_labels,
+                                             has_col_labels)
+    p = Preprocessing(data, row_labels, col_labels, options.transpose, float,
                       options.out_directory)
+    p.data.astype(float)
 
     filter_data = options.filter_data
     operators = options.operators
@@ -286,9 +302,12 @@ if __name__ == "__main__":
     pc = options.principal_components
 
     regress_out = []
-    regress_out.append([(pickle.load(open(rr)), 1) for rr in regress_rows])
-    regress_out.append([(pickle.load(open(rc)), 0) for rc in regress_cols])
+    if regress_rows is not None:
+        regress_out.append([(pickle.load(open(rr)), 1) for rr in regress_rows])
+    if regress_cols is not None:
+        regress_out.append([(pickle.load(open(rc)), 0) for rc in regress_cols])
     p.clean(pc, regress_out)
 
-    savename = options.odir + 'preprocessed_data'
+    savename = options.out_directory + 'preprocessed_data'
+    print "Saving processed data to: ", savename
     pickle.dump(p.data, open(savename, 'wb'))
