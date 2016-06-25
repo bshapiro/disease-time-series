@@ -1,19 +1,26 @@
 import numpy as np
-import sys
 import pickle
 from config import config, param
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from tools.helpers import *
+# from tools.helpers import *
 from representation import Representation
 
 parser = OptionParser()
+parser.add_option("--in_directory", dest="in_dir", default="./",
+                  help="Directory to look for files, default curr directory")
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
-                  help="Dataset")
-parser.add_option("--dir", dest="directory",
-                  help="Directory to look for data files.")
+                  help="Dataset, the file the the data matrix in it")
+parser.add_option("--filetype", dest="filetype", default='pickle',
+                  help="File type of data file ('csv', 'tsv', 'pickle')")
+parser.add_option("--has_row_labels", dest="has_row_labels", default=False,
+                  help="If True, first column of dataset file are labels")
+parser.add_option("--has_col_labels", dest="has_col_labels", default=False,
+                  help="If True, first column of dataset file are labels")
+parser.add_option("transpose_data", dest="transpose", default=False,
+                  help="If True, tranpose the data matrix")
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
 parser.add_option("-o", "--operators", dest="operators", default=None,
@@ -27,12 +34,13 @@ parser.add_option("-p", "--principal_components", dest="principal_components",
 parser.add_option("--regress_cols", dest="regress_cols", default=None,
                   help="Regress data on columns of matrix")
 parser.add_option("--regress_rows", dest="regress_rows", default=None,
-                  help="Regress data on columns of matrix")
-parser.add_option("--odir", dest="odirectory", default='./',
+                  help="Regress data on rows of matrix")
+parser.add_option("--odir", dest="out_directory", default='./',
                   help="Output directory+prefix to prepend to any saved output"
                   )
 parser.add_option("--saveas", dest="saveas", default='pickle',
-                  help="How to save preprocessed data: \'pickle\', \'mat\', \'R\', \'txt\'"
+                  # help="How to save preprocessed data:
+                  # \'pickle\', \'mat\', \'R\', \'txt\'"
                   )
 
 (options, args) = parser.parse_args()
@@ -40,7 +48,8 @@ parser.add_option("--saveas", dest="saveas", default='pickle',
 
 class Preprocessing:
 
-    def __init__(self, data, sample_labels=None, feature_labels=None, transpose=config['transpose_data'], iterate_clean=False, odir='./'):
+    def __init__(self, data, sample_labels=None, feature_labels=None,
+                 transpose=False, odir='./'):
         """
         UPDATE
         Notes:
@@ -91,7 +100,8 @@ class Preprocessing:
         # user wont be able to easily recover which indices of the
         # external data to include in the filtering process
         # a solution to this is to add all the values they want to filter
-        # on to the self.data DataFrame to perform filtering then remove them    
+        # on to the self.data DataFrame to perform filtering then remove them
+
         f_data = f[0]
         f_operation = f[1]
         f_threshold = f[2]
@@ -100,7 +110,7 @@ class Preprocessing:
         operation = self.make_operation(f_operation, f_threshold)
         include = operation(f_data)
 
-        #if data is None:
+        # if data is None:
         #    data = self.data
         if include_nan:
             nan_mask = np.isnan(f_data)
@@ -108,7 +118,7 @@ class Preprocessing:
 
         included = np.empty(0)
         if f_axis == 1:
-            self.data = self.data.iloc[:,include]
+            self.data = self.data.iloc[:, include]
             included = self.data.columns.get_values()
         if f_axis == 0:
             self.data = self.data.iloc[include, :]
@@ -219,8 +229,8 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
     Labels will be empty arrays if row_labels and col_labels are False
     Returns data matrix, row_labels, and column labels
     """
-    row_labels = np.empty(0)
-    col_labels = np.empty(0)
+    row_labels = None
+    col_labels = None
     data = np.empty(0)
 
     if filetype == 'pickle':
@@ -249,32 +259,36 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
 
 
 if __name__ == "__main__":
-    pass
-    """
-    # TODO: walk through pipeline using provided arguments
-    # TODO: rewrite the data to some specified location (additional argument)
 
-    files = []
-    if options.dataset == 'my_connectome':
-        files = ['GSE58122_varstab_data_prefiltered_geo.txt',
-                 'mc_geneset.p', 'GSE58122_series_matrix.txt', 'rin.p']
-        timesteps = np.arange(0, 43)
+    datapath = options.in_dir + options.dataset
+    data, row_labels, col_labels = load_file(datapath, options.filetype,
+                                             options.has_row_labels,
+                                             options.has_col_labels)
+    p = Preprocessing(options.data, options.has_row_labels,
+                      options.has_col_labels, options.transpose,
+                      options.out_directory)
 
-    p = Preprocessing(options.directory+files[0], filter_data=options.filter_data, operators=options.operators,
-                      thresholds=options.thresholds, clean_components=options.principal_components, sample_labels=options.directory+files[1])
+    filter_data = options.filter_data
+    operators = options.operators
+    thresholds = options.thresholds
+    filter_axes = options.filter_axes
 
-        # TODO: take out
-        # if filter_data is strings, they are paths to pickles so load them
-        # otherwise assume they are in some usable form (numpy array)
-        if filter_data is not None and operators is not None and thresholds is not None:
-            for i in range(len(filter_data)):
-                if type(filter_data[i]) is str:
-                    filter_data[i] = load(open(filter_data[i]))
+    if filter_data is not None:
+        for i in range(len(filter_data)):
+            filter_data[i] = pickle.load(open(filter_data[i]))
 
-            filters = zip(filter_data, operators, thresholds)
-            for f in filters:
-                self.data = self.filter(f)
+        filters = zip(filter_data, operators, thresholds, filter_axes)
+        for f in filters:
+            p.filter(f)
 
+    regress_rows = options.regress_rows
+    regress_cols = options.regress_cols
+    pc = options.principal_components
 
-        self.data = self.clean(clean_components, regress_out)
-    """
+    regress_out = []
+    regress_out.append([(pickle.load(open(rr)), 1) for rr in regress_rows])
+    regress_out.append([(pickle.load(open(rc)), 0) for rc in regress_cols])
+    p.clean(pc, regress_out)
+
+    savename = options.odir + 'preprocessed_data'
+    pickle.dump(p.data, open(savename, 'wb'))
