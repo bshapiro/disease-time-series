@@ -1,3 +1,4 @@
+import addpath
 from collections import defaultdict
 from sklearn.cluster import KMeans
 import itertools
@@ -9,7 +10,7 @@ import pandas as pd
 import scipy as sp
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
-from src.representation import Representation  # TODO: This import doesn't work.
+from src.representation import Representation  # TODO: move component computation out of helpers and remove this import
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
