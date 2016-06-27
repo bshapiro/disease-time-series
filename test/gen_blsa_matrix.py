@@ -6,7 +6,8 @@ from pickle import load, dump
 trascript_dict = load(open('blsa_transcript_dict.p', 'rb'))
 transcript_names = transcript_dict.values()
 
-samples = set([name[:5] for name in glob("/scratch0/battle-fs1/blsa-pilot/donor_samples/*")])
+samples = set([name[46:50] for name in glob("/scratch0/battle-fs1/blsa-pilot/donor_samples/*")])
+
 data = []
 for sample in samples:
     files = glob(sample + '*')

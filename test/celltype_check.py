@@ -51,6 +51,10 @@ for gene in candidates:
 
 lymphocyte_genes = np.array(lymphocyte_genes)
 
+blsa_transcripts = load(open('blsa_transcript_dict.p'))
+blsa_df = pd.read_pickle('pbmc_dataframe.p')
+
+common_genes = np.array(list(set(gc.data.index.values).intersection(set(blsa_df.index.values))))
 
 meth = 'spearman'
 # on raw data
@@ -68,7 +72,7 @@ for i in range(4):
     # c, p = associate(clean_df, track, targets1=lymphocyte_genes,
     #                        targets2=pbmc,  method=meth, outpath=savename)
     c, p = sp.stats.spearmanr(clean)
-    plt_title = 'rin+' + str(pcs) + 'Absolute Spearman R.png'
-    HeatMap(np.abs(c), labels, labels, title=plt_title)
-    #plt_title = str(pcs) + 'Spearman p.png'
-    #HeatMap(p, labels, labels, title=plt_title)s
+    p += 1e-20
+    p = -1 * np.log10(p)
+    plt_title = 'rin+' + str(pcs) + 'Spearman p.png'
+    HeatMap(p, labels, labels, title=plt_title)

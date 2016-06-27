@@ -9,7 +9,7 @@ import pandas as pd
 import scipy as sp
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
-# from src.representation import Representation  # TODO: This import doesn't work.  
+from src.representation import Representation  # TODO: This import doesn't work.
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -47,7 +47,8 @@ def plot_2D(data, color_labels=None, x=0, y=1, xlabel='X', ylabel='Y',
     return
 
 
-def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', odir='plot'):
+def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2',
+                  title='PC-Plot', odir='plot'):
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
     """
@@ -71,13 +72,14 @@ def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2', title='
     ax2.set_xlabel('PC')
     ax2.set_ylabel('Explained Variance Ratio')
 
-    savename = savename + title  # what is this?
+    savename = odir + title
     plt.savefig(savename)
     plt.close()
     return
 
 
-def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2', title='PC-Plot', odir='./'):
+def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
+           title='PC-Plot', odir='./'):
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
     """
@@ -93,7 +95,8 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2', title=
 
     div = make_axes_locatable(ax[0])
     cax = div.append_axes("right", size="15%", pad=0.05)
-    cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0, 10, .1), format="%.2g")
+    cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0, 10, .1),
+                        format="%.2g")
 
     ax[1].plot(pca[2])
     ax[1].set_xlabel('PC')
@@ -101,7 +104,7 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2', title=
 
     savename = odir + title
     plt.tight_layout()
-    #plt.show()
+    # plt.show()
     plt.savefig(savename)
     plt.close()
     return
@@ -115,20 +118,11 @@ def HeatMap(data, row_labels, col_labels, title='Heat Map', odir='./'):
     ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
     ax.invert_yaxis()
     ax.xaxis.tick_top()
-
-    """
-    for y in range(data.shape[0]):
-        for x in range(data.shape[1]):
-            plt.text(x + 0.5, y + 0.5, '%.4f' % data[y, x],
-                     horizontalalignment='center',
-                     verticalalignment='center',
-                     )
-    """
     ax.set_xticklabels(col_labels, rotation='vertical', minor=False)
     ax.set_yticklabels(row_labels, minor=False)
     plt.colorbar()
     plt.tight_layout()
-    #plt.show()
+    # plt.show()
     plt.savefig(odir+title)
     plt.close()
 
@@ -224,7 +218,8 @@ def regress_out(self, ind, X=None, axis=None):
     return new_data, linreg
 
 
-def associate(data1, data2, targets1=None, targets2=None, method='spearman', outpath=''):
+def associate(data1, data2, targets1=None, targets2=None, method='spearman',
+              outpath=''):
     """
     data1 (ixj)and data2(nxm) are DataFrames
     targets are the columns of data 2 that we want to check an
@@ -239,9 +234,9 @@ def associate(data1, data2, targets1=None, targets2=None, method='spearman', out
         targets2 = data2.axes[1]
 
     pvals = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
-                          index=targets1, columns=targets2)
+                         index=targets1, columns=targets2)
     corr = pd.DataFrame(data=np.empty((targets1.size, targets2.size)),
-                          index=targets1, columns=targets2)
+                        index=targets1, columns=targets2)
 
     if method is 'spearman':
         method = sp.stats.spearmanr
@@ -252,7 +247,7 @@ def associate(data1, data2, targets1=None, targets2=None, method='spearman', out
         for i in targets1:
             notnan = data2[(~np.isnan(data2[j].astype(float)))].index
             r, p = method(data1.loc[i, notnan].as_matrix(),
-                                      data2.loc[notnan, j].as_matrix())
+                          data2.loc[notnan, j].as_matrix())
             pvals.loc[i, j] = p
             corr.loc[i, j] = r
         savepath = outpath+j
@@ -273,12 +268,15 @@ def check_k_range(data, cluster_sizes, iterations, savename):
             km.fit(data)
             l = km.labels_
             for i in range(k):
-                pairs = set(itertools.combinations(np.where(l == i)[0].tolist(), 2))
+                pairs = set(itertools.combinations(np.where(l == i)
+                            [0].tolist(), 2))
                 for pair in pairs:
                     index_pairs.__getitem__(pair)
                     index_pairs[pair] += 1
-        #conserved = sum(index_pairs.values()) / float((len(index_pairs.keys()) * 2))
-        conserved = sum([x >= 2 for x in index_pairs.values()]) / float(len(index_pairs.keys()))
+        # conserved = sum(index_pairs.values()) /
+        # float((len(index_pairs.keys()) * 2))
+        conserved = sum([x >= 2 for x in index_pairs.values()]) /\
+            float(len(index_pairs.keys()))
         print conserved
         conservation.append(conserved)
 
@@ -305,12 +303,6 @@ def iterative_clean(p, clean_components, clusters=3, transpose=False,
 
         plt_title = title+"RemovedPCs:" + str(c)
         pltfunc(data=clean, title=plt_title, **kwargs)
-        #PCPlot(clean, k=clusters, xlabel='PC-1', ylabel='PC-2', title=plt_title, savename=odir)
-        #pca = Representation(clean, 'pca').getRepresentation()
-        #kmeans = KMeans(n_clusters=clusters)
-        #kmeans.fit(clean)
-
-        #plot_2D(pca[0], kmeans.labels_, title=plt_title, savename=odir)
 
 
 def make_config_string(config, org_params):
