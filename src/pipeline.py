@@ -13,8 +13,6 @@ from gsea.run_enrichment import run_enrichment
 from gsea.process_gsea_output import get_sigs
 from tools.helpers import make_config_string
 import os
-from analysis import histogram_analysis
-import sys
 
 parser = OptionParser()
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
@@ -220,9 +218,9 @@ if __name__ == "__main__":
     raw_view2 = np.transpose(load(open(options.directory + files[1])))
     genes = load(open(options.directory + files[2]))
 
-    histogram_analysis(raw_view1, 'view1')
-    histogram_analysis(raw_view2, 'view2')
-    sys.exit()
+    # histogram_analysis(raw_view1, 'view1')
+    # histogram_analysis(raw_view2, 'view2')
+    # sys.exit()
 
     if param['log_transform']:
         basic_view1 = BasicPipeline(np.log2(raw_view1 + 2), genes)
