@@ -25,38 +25,37 @@ parser.add_option("--dir", dest="directory",
 
 class ClusterPipeline:
 
-    def __init__(self, rep_type, view1, view2, genes):
+    def __init__(self, rep_type, data1, data2, genes):
         self.rep_type = rep_type
-        self.view1 = view1
-        self.view2 = view2
+        self.data1 = data1
+        self.data2 = data2
         self.genes = genes
 
     def run_pipeline(self):
+        representation = Representation(self.data1, view2=self.data2)
         if self.rep_type == 'pca':
-            view1_loadings = self.learn_loadings(self.view1)
+            view1_loadings = self.learn_loadings(representation)
             # view2_loadings = self.learn_loadings(self.view2, 'pca')
         elif self.rep_type == 'cca':
             if self.view1.shape[1] == self.view2.shape[1] + 1:
-                loadings = self.learn_loadings(self.view1[:, 1:], view2=self.view2)
-            else:
-                loadings = self.learn_loadings(self.view1, view2=self.view2)
+                representation = Representation(self.data1[:, 1:], view2=self.data2)
+            loadings = self.learn_loadings(representation)
             view1_loadings = loadings[0]
             # view2_loadings = loadings[1]
-        clusters, centers = Representation(view1_loadings, 'kmeans', scale=False).getRepresentation()
+        clusters, centers = Representation(view1_loadings, scale=False).kmeans()
         cluster_dict = self.process_clusters(clusters, centers)
         return cluster_dict
 
-    def learn_loadings(self, view, view2=None):
+    def learn_loadings(self, representation):
         if self.rep_type == 'pca':
-            loadings = self.learn_pca_loadings(view)
+            loadings = self.learn_pca_loadings(representation)
         elif self.rep_type == 'cca':
-            loadings = self.learn_cca_loadings(view, view2)
+            loadings = self.learn_cca_loadings(representation)
         return loadings
 
-    def learn_pca_loadings(self, view):
-        view_dim1 = view.shape[1]
-        svd = Representation(view, 'svd', axis=0)
-        svd_results = svd.getRepresentation()
+    def learn_pca_loadings(self, representation):
+        view_dim1 = representation.view.shape[1]
+        svd_results = representation.svd()
         U = svd_results[0]
         S_vector = svd_results[1]
         # V = svd _results[2]
@@ -65,10 +64,8 @@ class ClusterPipeline:
         svd_loadings = np.dot(U, S)
         return svd_loadings[:, :param['components']]
 
-    def learn_cca_loadings(self, view1, view2):
-        cca = Representation(view1, 'cca', axis=0, data2=view2)
-        cca_result = cca.getRepresentation()
-        cca_loadings = cca_result
+    def learn_cca_loadings(self, representation):
+        cca_loadings = representation.cca()
         return cca_loadings
 
     def process_clusters(self, clusters, cluster_centers):
@@ -155,11 +152,11 @@ class GPPipeline:
 class BasicPipeline:
 
     def __init__(self, view, genes):
-        self.view = view
+        self.representation = Representation(view)
         self.genes = genes
 
     def pca_view(self):
-        pca = Representation(self.view, 'pca').getRepresentation()
+        pca = self.representation.pca()
         plt.plot(pca[2])
         plt.show()
         pdb.set_trace()
@@ -167,39 +164,38 @@ class BasicPipeline:
         return pca
 
     def pca_view_diff(self):
-        view = self.time_diff()
-        pca = Representation(view, 'pca').getRepresentation()
+        tmp_view = self.representation.view
+        self.representation.view = self.time_diff()
+        pca = self.representation.view.pca()
         plt.plot(pca[2])
         plt.show()
         pdb.set_trace()
         plt.clf()
+        self.representation.view = tmp_view
         return pca
 
     def time_diff(self):
-        num_t = self.view.shape[1]
-        num_g = self.view.shape[0]
+        num_t = self.representation.view.shape[1]
+        num_g = self.representation.view.shape[0]
         d_matrix = np.ndarray((num_g, num_t - 1))
         for i in range(1, num_t):
-            d_matrix[:, i - 1] = self.view[:, i] - self.view[:, i - 1]
+            d_matrix[:, i - 1] = self.representation.view[:, i] - self.representation.view[:, i - 1]
         return d_matrix
 
     def clean(self):
         print "Cleaning data..."
-        view = scale(self.view)
-        U, S, V = Representation(view, 'svd').getRepresentation()
-        new_view = np.ndarray(view.shape)
+        U, S, V = self.representation.svd()
+        new_view = np.ndarray(self.representation.view.shape)
         loadings = U[:, 0:param['clean_components']]
-        for i in range(view.shape[1]):
-            feature_vector = view[:, i]
+        for i in range(self.representation.view.shape[1]):
+            feature_vector = self.representation.view[:, i]
             model = LinearRegression(fit_intercept=False)
             model.fit(loadings, feature_vector)
             residual = feature_vector - model.predict(loadings)
             new_view[:, i] = residual
 
-        new_view = scale(new_view)
-
-        return new_view
-
+        self.representation.view = scale(new_view)
+        return self.representation.view
 
 if __name__ == "__main__":
     if options.dataset == 'hRSV':
