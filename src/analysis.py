@@ -4,15 +4,14 @@ import numpy as np
 
 
 def histogram_analysis(matrix, view_name):
-    import pdb; pdb.set_trace()
     index = 0
-    for column in matrix:
+    for column in matrix.T:
         print column
-        y, binEdges = np.histogram(column, bins=1000000)
+        y, binEdges = np.histogram(column, bins=100000)
         bincenters = 0.5 * (binEdges[1:] + binEdges[:-1])
         plt.plot(bincenters, y, '-', label='Timestep ' + str(index))
         index += 1
     plt.legend()
-    plt.xlim(0, 5)
+    plt.xlim(0, 100)
     plt.savefig(config['project_root'] + 'data/histogram_view=' + view_name + '.png')
     plt.clf()

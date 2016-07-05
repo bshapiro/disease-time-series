@@ -1,13 +1,12 @@
+# import addpath
 from collections import defaultdict
 from sklearn.cluster import KMeans
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-import sys
 import pandas as pd
 import scipy as sp
-from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
 from sklearn.decomposition import PCA
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -55,15 +54,14 @@ def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2',
     pca = PCA()
     pca.fit(data)
     pca_data = pca.transform(data)
-
     kmeans = KMeans(n_clusters=k)
     kmeans.fit(data)
     fig = plt.figure()
     plt.title(title, figure=fig)
 
     ax1 = fig.add_subplot(211)
-    x_vals = pca[0][:, pc1]
-    y_vals = pca[0][:, pc2]
+    x_vals = pca_data[:, pc1]
+    y_vals = pca_data[:, pc2]
     colors = label_coloring(kmeans.labels_)
     ax1.scatter(x_vals, y_vals, s=50, c=colors)
     ax1.scatter(x_vals, y_vals, s=50)
@@ -115,44 +113,9 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
     plt.close()
     return
 
-def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
-           title='PC-Plot', odir='./'):
-    """
-    Plot over PCs (1st and 2nd) coloring based on kmeans clustering
-    """
-    pca = PCA()
-    pca.fit(data)
-    pca_data = pca.transform(data)
-
-    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    fig.suptitle(title)
-
-    x_vals = pca_data[:, pc1]
-    y_vals = pca_data[:, pc2]
-    pcplot = ax[0].scatter(x_vals, y_vals, s=50, c=labels)
-    ax[0].set_xlabel(xlabel)
-    ax[0].set_ylabel(ylabel)
-
-    div = make_axes_locatable(ax[0])
-    cax = div.append_axes("right", size="15%", pad=0.05)
-    cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0, 10, .1),
-                        format="%.2g")
-
-    ax[1].plot(pca.explained_variance_ratio_)
-    ax[1].set_xlabel('PC')
-    ax[1].set_ylabel('Explained Variance Ratio')
-
-    savename = odir + title
-    plt.tight_layout()
-    # plt.show()
-    plt.savefig(savename)
-    plt.close()
-    return
-
 
 def HeatMap(data, row_labels, col_labels, cmin=None, cmax=None,
             title='Heat Map', odir='./'):
-    #fig, ax = plt.subplots(figsize=(15, 15))
     fig, ax = plt.subplots()
     heatmap = plt.pcolor(data)
     plt.clim(cmin, cmax)
@@ -230,38 +193,6 @@ def get_lsv(X, pca):
     U = X.dot(W).dot(np.linalg.inv(SV))
     return U, SV, W
 
-"""
-def regress_out(self, ind, X=None, axis=None):
-    if X is None:
-        X = self.X
-    if axis is None:
-        # try and figure out what axis based on the
-        # dimensions of independent variable
-        n = ind.shape[0]
-        if X.shape[0] == X.shape[1]:
-            # this is an ambigous case
-            print >> sys.stderr, 'Ambiguous dimensions, please specify axis'
-            return
-        if X.shape[0] == n:
-            axis = 0
-        elif X.shape[1] == n:
-            axis = 1
-        else:
-            print >> sys.stderr, 'Mismatched dimensions'
-
-    print 'Axis: ', axis
-    if axis == 1:
-        X = np.transpose(X)
-    linreg = LinearRegression()
-    linreg.fit(ind, X)
-    new_data = X - linreg.predict(ind)
-    # add back the intercept
-    new_data = np.apply_along_axis(np.add, 1, new_data, linreg.intercept_)
-    if axis == 1:
-        X = np.transpose(X)
-        new_data = np.transpose(new_data)
-    return new_data, linreg
-"""
 
 def associate(data1, data2, targets1=None, targets2=None, method='spearman',
               save=False, savename='',  outpath=''):
