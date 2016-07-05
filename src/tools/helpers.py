@@ -9,8 +9,7 @@ import pandas as pd
 import scipy as sp
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import scale
-from src.representation import Representation
-# TODO: This import doesn't work.
+from sklearn.decomposition import PCA
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -53,7 +52,10 @@ def PCPlot_kmeans(data, pc1=0, pc2=1, k=3, xlabel='PC-1', ylabel='PC-2',
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
     """
-    pca = Representation(data, 'pca').getRepresentation()
+    pca = PCA()
+    pca.fit(data)
+    pca_data = pca.transform(data)
+
     kmeans = KMeans(n_clusters=k)
     kmeans.fit(data)
     fig = plt.figure()
@@ -84,12 +86,15 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
     """
     Plot over PCs (1st and 2nd) coloring based on kmeans clustering
     """
-    pca = Representation(data, 'pca').getRepresentation()
+    pca = PCA()
+    pca.fit(data)
+    pca_data = pca.transform(data)
+
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
     fig.suptitle(title)
 
-    x_vals = pca[0][:, pc1]
-    y_vals = pca[0][:, pc2]
+    x_vals = pca_data[:, pc1]
+    y_vals = pca_data[:, pc2]
     pcplot = ax[0].scatter(x_vals, y_vals, s=50, c=labels)
     ax[0].set_xlabel(xlabel)
     ax[0].set_ylabel(ylabel)
@@ -99,7 +104,41 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
     cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0, 10, .1),
                         format="%.2g")
 
-    ax[1].plot(pca[2])
+    ax[1].plot(pca.explained_variance_ratio_)
+    ax[1].set_xlabel('PC')
+    ax[1].set_ylabel('Explained Variance Ratio')
+
+    savename = odir + title
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(savename)
+    plt.close()
+    return
+
+def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
+           title='PC-Plot', odir='./'):
+    """
+    Plot over PCs (1st and 2nd) coloring based on kmeans clustering
+    """
+    pca = PCA()
+    pca.fit(data)
+    pca_data = pca.transform(data)
+
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    fig.suptitle(title)
+
+    x_vals = pca_data[:, pc1]
+    y_vals = pca_data[:, pc2]
+    pcplot = ax[0].scatter(x_vals, y_vals, s=50, c=labels)
+    ax[0].set_xlabel(xlabel)
+    ax[0].set_ylabel(ylabel)
+
+    div = make_axes_locatable(ax[0])
+    cax = div.append_axes("right", size="15%", pad=0.05)
+    cbar = plt.colorbar(pcplot, cax=cax, ticks=np.arange(0, 10, .1),
+                        format="%.2g")
+
+    ax[1].plot(pca.explained_variance_ratio_)
     ax[1].set_xlabel('PC')
     ax[1].set_ylabel('Explained Variance Ratio')
 
@@ -111,24 +150,28 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
     return
 
 
-def HeatMap(data, row_labels, col_labels, title='Heat Map', odir='./'):
-    fig, ax = plt.subplots(figsize=(15, 15))
+def HeatMap(data, row_labels, col_labels, cmin=None, cmax=None,
+            title='Heat Map', odir='./'):
+    #fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots()
     heatmap = plt.pcolor(data)
+    plt.clim(cmin, cmax)
     fig.suptitle(title)
-    ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
-    ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
+    ax.set_xticks(np.arange(data.shape[1])+0.5, minor=False)
+    ax.set_yticks(np.arange(data.shape[0])+0.5, minor=False)
     ax.invert_yaxis()
     ax.xaxis.tick_top()
     ax.set_xticklabels(col_labels, rotation='vertical', minor=False)
     ax.set_yticklabels(row_labels, minor=False)
     plt.colorbar()
     plt.tight_layout()
+
     # plt.show()
     plt.savefig(odir+title)
     plt.close()
 
 
-def QQPlot(observed_p, savename):
+def QQPlot(observed_p, plt_title, savepath):
     # make the QQ plot, borrowed from Princy's code demonstrating QQ plots
     n = observed_p.size
     obs_p = -np.log10(np.sort(observed_p))
@@ -140,8 +183,9 @@ def QQPlot(observed_p, savename):
     ax.plot(x, x)
     ax.set_xlabel('Theoretical')
     ax.set_ylabel('Observed')
-    ax.set_title(savename)
-    plt.savefig(savename)
+    ax.set_title(plt_title)
+    savepath = savepath + plt_title
+    plt.savefig(savepath)
     plt.close()
 
 
@@ -186,7 +230,7 @@ def get_lsv(X, pca):
     U = X.dot(W).dot(np.linalg.inv(SV))
     return U, SV, W
 
-
+"""
 def regress_out(self, ind, X=None, axis=None):
     if X is None:
         X = self.X
@@ -217,10 +261,10 @@ def regress_out(self, ind, X=None, axis=None):
         X = np.transpose(X)
         new_data = np.transpose(new_data)
     return new_data, linreg
-
+"""
 
 def associate(data1, data2, targets1=None, targets2=None, method='spearman',
-              outpath=''):
+              save=False, savename='',  outpath=''):
     """
     data1 (ixj)and data2(nxm) are DataFrames
     targets are the columns of data 2 that we want to check an
@@ -251,10 +295,14 @@ def associate(data1, data2, targets1=None, targets2=None, method='spearman',
                           data2.loc[notnan, j].as_matrix())
             pvals.loc[i, j] = p
             corr.loc[i, j] = r
-        savepath = outpath+j
-        QQPlot(pvals[j].as_matrix(), savename=savepath)
-    savename = outpath + '_correlations.p'
-    pickle.dump([corr, pvals], open(savename, 'wb'))
+        plttitle = savename + j
+        savepath = outpath + savename + j
+        print "saving plot to: ", savepath
+        QQPlot(pvals[j].as_matrix(), plt_title=plttitle, savepath=outpath)
+
+    if save:
+        savename = outpath + '_correlations.p'
+        pickle.dump([corr, pvals], open(savename, 'wb'))
 
     return corr, pvals
 
@@ -286,7 +334,7 @@ def check_k_range(data, cluster_sizes, iterations, savename):
     return conservation
 
 
-def iterative_clean(p, clean_components, clusters=3, transpose=False,
+def iterative_clean(p, clean_components, regress=None, transpose=False,
                     odir='./', title='', pltfunc=PCPlot, **kwargs):
     """
     p is a preprocessing object,
@@ -297,12 +345,12 @@ def iterative_clean(p, clean_components, clusters=3, transpose=False,
     for i in range(clean_components+1):
         c = np.arange(i)
         print 'Cleaning PCs: ', c
-        clean = p.clean(components=c, update_data=False)
+        clean = p.clean(components=c, regress_out=regress, update_data=False)
         if transpose:
             clean = clean.T
         clean = scale(clean)
 
-        plt_title = title+"RemovedPCs:" + str(c)
+        plt_title = title + str(c)
         pltfunc(data=clean, title=plt_title, **kwargs)
 
 
