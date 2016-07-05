@@ -15,12 +15,23 @@ parser.add_option("-d", "--dataset", dest="dataset", default=None,
                   help="Dataset, the file the the data matrix in it")
 parser.add_option("--filetype", dest="filetype", default='pickle',
                   help="File type of data file ('csv', 'tsv', 'pickle')")
-parser.add_option("--has_row_labels", dest="has_row_labels", default=False,
+parser.add_option("--has_row_labels", action="store_true",
+                  dest="has_row_labels", default=False,
                   help="If True, first column of dataset file are labels")
-parser.add_option("--has_col_labels", dest="has_col_labels", default=False,
+parser.add_option("--has_col_labels", action="store_true",
+                  dest="has_col_labels", default=False,
                   help="If True, first column of dataset file are labels")
-parser.add_option("--transpose_data", dest="transpose", default=False,
+parser.add_option("--transpose_data",  action="store_true",
+                  dest="transpose", default=False,
                   help="If True, tranpose the data matrix")
+parser.add_option("-s", "--scale_data", action="store_true",
+                  dest="scale_data", default=False,
+                  help="If true scales data so columns have mean 0 variance 1")
+parser.add_option("-l", "--log_transform", action="store_true",
+                  dest="log_transform", default=False,
+                  help="If true performs log2 transform on data")
+parser.add_option("--log_shift", default=1,
+                  help="Shift raw values by this amount before log trasform")
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
 parser.add_option("-o", "--operators", dest="operators", default=None,
@@ -30,7 +41,7 @@ parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
 parser.add_option("-a", "--filter_axes", dest="filter_axes", default=None,
                   help="List of axes for each filter operation")
 parser.add_option("-p", "--principal_components", dest="principal_components",
-                  default=None, help="List of PCs to regress out")
+                  default=[], help="List of PCs to regress out")
 parser.add_option("--regress_cols", dest="regress_cols", default=None,
                   help="Regress data on columns of matrix")
 parser.add_option("--regress_rows", dest="regress_rows", default=None,
@@ -39,8 +50,8 @@ parser.add_option("--odir", dest="out_directory", default='',
                   help="Output directory+prefix to prepend to any saved output"
                   )
 parser.add_option("--saveas", dest="saveas", default='pickle',
-                  # help="How to save preprocessed data:
-                  # \'pickle\', \'mat\', \'R\', \'txt\'"
+                  help=("How to save data:" +
+                        "\'pickle\', \'mat\', \'R\', \'txt\'")
                   )
 
 (options, args) = parser.parse_args()
@@ -69,8 +80,9 @@ class Preprocessing:
         if transpose:
             self.raw = self.raw.T
 
-        self.data = pd.DataFrame(data=self.raw, index=self.raw_samples,
+        self.data = pd.DataFrame(data=self.raw.copy(), index=self.raw_samples,
                                  columns=self.raw_features)
+
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
         # filter_data=None, operators=None, thresholds=None,
@@ -175,7 +187,8 @@ class Preprocessing:
                 new_data = self.regress_out(r[0], new_data, r[1])
         # if we do actually have PCs to regress out do that now
         if loadings.size != 0:
-            new_data = self.regress_out(loadings)
+            # loadings = loadings.reshape(-1, len(components))
+            new_data = self.regress_out(loadings, new_data, 0)
 
         new_data = scale(new_data)
         if update_data:
@@ -183,15 +196,13 @@ class Preprocessing:
 
         return new_data
 
-    def regress_out(self, X, y=None, axis=0):
+    def regress_out(self, X, y, axis):
         """
         regresses X on y
         by defauly y is the matrix in self.data
         if you don't specify an axis it assumes 0
         """
         print 'Regressing out variable...'
-        if y is None:
-            y = self.data
 
         print 'Axis: ', axis
 
@@ -212,10 +223,23 @@ class Preprocessing:
         """
         resets self.data to the original, raw data matrix
         """
-        self.data = pd.DataFrame(data=self.raw, index=self.raw_samples,
+        self.data = pd.DataFrame(data=self.raw.copy(), index=self.raw_samples,
                                  columns=self.raw_features)
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
+
+    def scale(self):
+        """
+        Scale data so each feature has mean 0 variance 1
+        """
+        self.data.loc[:, :] = scale(self.data.as_matrix())
+
+    def log_transform(self, shift):
+        """
+        log2 transform on data
+        adds shift value to avoid log transform on non-positive values
+        """
+        self.data.loc[:, :] = np.log2(self.data.as_matrix() + shift)
 
 
 def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
@@ -264,25 +288,35 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
 
 
 if __name__ == "__main__":
+    """
+    Order of operations:
+    1. load the file, create preprocessing object
+    2. perform any filtering specified
+    3. log transform data if specified, shift by value of log_shift (default 1)
+    4. scale if specified (scaled columns to have mean 0 variance 1)
+    5. data cleaning on pcs and values specified in regress_rows/regress_cols
+    6. save output
+    """
 
     datapath = options.in_dir + options.dataset
-    print datapath
 
-    has_row_labels = False
-    has_row_labels = False
+    # has_row_labels = False
+    # has_row_labels = False
 
-    if options.has_row_labels == 'True':
-        has_row_labels = True
+    # if options.has_row_labels == 'True':
+    #    has_row_labels = True
 
-    if options.has_col_labels == 'True':
-        has_col_labels = True
+    # if options.has_col_labels == 'True':
+    #    has_col_labels = True
 
     data, row_labels, col_labels = load_file(datapath, options.filetype,
-                                             has_row_labels,
-                                             has_col_labels)
+                                             options.has_row_labels,
+                                             options.has_col_labels)
+
+    print row_labels
+    print col_labels
     p = Preprocessing(data, row_labels, col_labels, options.transpose, float,
                       options.out_directory)
-    p.data.astype(float)
 
     filter_data = options.filter_data
     operators = options.operators
@@ -297,6 +331,12 @@ if __name__ == "__main__":
         for f in filters:
             p.filter(f)
 
+    if options.log_transform:
+        p.log_transform(options.log_shift)
+
+    if options.scale_data:
+        p.scale()
+
     regress_rows = options.regress_rows
     regress_cols = options.regress_cols
     pc = options.principal_components
@@ -310,4 +350,17 @@ if __name__ == "__main__":
 
     savename = options.out_directory + 'preprocessed_data'
     print "Saving processed data to: ", savename
-    pickle.dump(p.data, open(savename, 'wb'))
+
+    if options.saveas is 'pickle':
+        pickle.dump(p.data, open(savename, 'wb'))
+    if options.saveas is 'csv':
+        p.data.to_csv(path_or_buf=savename, sep=',')
+    if options.saveas is 'tsv':
+        p.data.to_csv(path_or_buf=savename, sep='\t')
+    # TODO: be able to save for use in r and matlab
+    # if options.saveas is 'r':
+    #    from rpy2.robjects import pandas2ri
+    #    pandas2ri.activate()
+    #    r_df = padas2ri.pi2ri(p.data)
+    # if options.saveas is 'mat':
+    #    import scipy.io as sio
