@@ -77,11 +77,11 @@ class Preprocessing:
         self.raw_samples = sample_labels
         self.raw_features = feature_labels
 
-        if transpose:
-            self.raw = self.raw.T
-
         self.data = pd.DataFrame(data=self.raw.copy(), index=self.raw_samples,
                                  columns=self.raw_features)
+
+        if transpose:
+            self.transpose()
 
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
@@ -177,7 +177,7 @@ class Preprocessing:
 
         print "Cleaning data..."
         data = scale(self.data.as_matrix())
-        U, S, V = Representation(data, 'svd').getRepresentation()
+        U, S, V = Representation(data).svd()
         loadings = U[:, components]
 
         new_data = np.copy(data)
@@ -240,6 +240,11 @@ class Preprocessing:
         adds shift value to avoid log transform on non-positive values
         """
         self.data.loc[:, :] = np.log2(self.data.as_matrix() + shift)
+
+    def transpose(self):
+        self.data = self.data.T
+        self.samples = self.data.index.values
+        self.features = self.data.columns.values
 
 
 def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
