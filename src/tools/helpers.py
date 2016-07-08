@@ -115,7 +115,7 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
 
 
 def HeatMap(data, row_labels, col_labels, cmin=None, cmax=None,
-            title='Heat Map', odir='./'):
+            title='Heat Map', odir='./', x_rot='verticle'):
     fig, ax = plt.subplots()
     heatmap = plt.pcolor(data)
     plt.clim(cmin, cmax)
@@ -124,7 +124,7 @@ def HeatMap(data, row_labels, col_labels, cmin=None, cmax=None,
     ax.set_yticks(np.arange(data.shape[0])+0.5, minor=False)
     ax.invert_yaxis()
     ax.xaxis.tick_top()
-    ax.set_xticklabels(col_labels, rotation='vertical', minor=False)
+    ax.set_xticklabels(col_labels, rotation=x_rot, minor=False)
     ax.set_yticklabels(row_labels, minor=False)
     plt.colorbar()
     plt.tight_layout()
@@ -232,7 +232,7 @@ def associate(data1, data2, targets1=None, targets2=None, method='spearman',
         QQPlot(pvals[j].as_matrix(), plt_title=plttitle, savepath=outpath)
 
     if save:
-        savename = outpath + '_correlations.p'
+        savename = outpath + savename + '_correlations.p'
         pickle.dump([corr, pvals], open(savename, 'wb'))
 
     return corr, pvals
