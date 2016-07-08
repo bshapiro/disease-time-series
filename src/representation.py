@@ -10,7 +10,7 @@ from scipy.spatial.distance import cdist
 
 class Representation:
 
-    def __init__(self, view, view2=None, axis=0, scale=True):
+    def __init__(self, view, view2=None, axis=0, scale=False):
         self.axis = axis
         self.view2 = None
         self.scale = scale
@@ -69,25 +69,3 @@ class Representation:
         km.fit(self.view)
 
         return km.labels_, km.cluster_centers_
-
-    def kmeans_karl(self, view, n=param['kmeans_clusters'], axis=0):
-        """
-        Kmeans clustering on view, each row of view is a sample, columns are features
-        returns representation of view from kmeans results (set in config)
-            -binary = 1/0 for cluster assignments
-            -distance = euclidean distance to each cluster
-        array of cluster labels [0, k-1], and matrix of cluster centers
-        """
-
-        model = KMeans(n_clusters=n)
-        model.fit(view)
-        rep = np.zeros((n, model.labels_.size))
-
-        if param['kmeans_representation'] == 'binary':
-            for i in range(0, model.labels_.size):
-                rep[model.labels_[i], i] = 1
-
-        if param['kmeans_representation'] == 'distance':
-            rep = cdist(model.cluster_centers_, view, 'euclidean')
-
-        return rep, model.labels_, model.cluster_centers_
