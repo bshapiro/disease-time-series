@@ -57,7 +57,7 @@ metab = pd.DataFrame(metab.as_matrix(), index=metab.axes[0], columns=metab_sampl
 metab = metab.iloc[:106, :]
 
 mt = Preprocessing(metab.as_matrix(), metab.index.values, metab.columns.values,
-                   transpose=True)
+                   transpose=False)
 mt.log_transform(0)
 mt.scale()
 mt.clean(components=[0], update_data=True)
@@ -73,28 +73,42 @@ for i in range(len(kegglines)):
             p_genes.append(gene)
     pathway_members.append(p_genes)
 
-k = 10 # number of models
+k = mt.data.index.size # number of models
 n = 5 # number of states
-m = 100 # number of genes
+m = 500 # number of genes
 
 models = np.empty(0)
 for i in range(k):
-    models = np.append(models, hmm.GaussianHMM(n_components = n))
+    # models = np.append(models, hmm.GaussianHMM(n_components = n))
+    models = np.append(models, hard_leftright(43, 1))
 
 noise = hmm.GaussianHMM(n_components=1)
 
-sequences, lengths, labels = df_to_sequence_list(gc.data.iloc[:m, :])
-assignments = np.array([i % k for i in range(m)])
-assignments[:(m/2)] = k
-fixed = np.array([0] * m)
-#fixed[:10] = 1
-eps = 1e-5
-max_iter = 100
+msequences, mlengths, mlabels = df_to_sequence_list(mt.data)
+gsequences, glengths, glabels = df_to_sequence_list(gc.data.iloc[:m, :])
 
-noise.fit(sequences*100, lengths)
+sequences = np.concatenate((msequences, gsequences))
+lengths = np.concatenate((mlengths, glengths))
+
+massignemnts = np.array([i % k for i in range(mlengths.size)])
+gassignments = np.array([k] * glengths.size)
+gassignments[:(k*2)] = np.array([i % k for i in range(k*2)])
+assignments = np.concatenate((massignemnts, gassignments))
+
+mfixed = np.array([1] * mlengths.size)
+gfixed = np.array([0] * glengths.size)
+fixed = np.concatenate((mfixed, gfixed))
+
+labels = np.concatenate((mlabels, glabels))
+
+eps = 1e-5
+max_iter = 500
+
+noise.fit(gsequences, glengths) # fit noise model to gene expression
 
 shape = noise.covars_.shape
-#noise._covars_ = np.array([[1000]])
+noise._covars_ = noise._covars_ / 4
+
 print np.bincount(assignments)
-models, assignments, converged = cluster(models, np.array([noise]), sequences, lengths, assignments, fixed, eps, max_iter, save_name='test2.txt')
+models, assignments, converged = cluster(models, np.array([]), sequences, lengths, assignments, fixed, eps, max_iter, save_name='out.cluster.convergence')
 print np.bincount(assignments)
