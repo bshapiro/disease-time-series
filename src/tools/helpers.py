@@ -115,7 +115,7 @@ def PCPlot(data, pc1=0, pc2=1, labels=None, xlabel='PC-1', ylabel='PC-2',
 
 
 def HeatMap(data, row_labels, col_labels, cmin=None, cmax=None,
-            title='Heat Map', odir='./', x_rot='verticle'):
+            title='Heat Map', odir='./', x_rot='vertical'):
     fig, ax = plt.subplots()
     heatmap = plt.pcolor(data)
     plt.clim(cmin, cmax)
