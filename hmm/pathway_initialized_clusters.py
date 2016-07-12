@@ -24,6 +24,7 @@ data, rl, cl = load_file(mc_data, 'tsv', True, True)
 gc = Preprocessing(data, rl, cl)
 gc.filter((rin, '>', 6, 1))
 gc.clean(components=[0,1,2], regress_out=[(goodrin, 1)], update_data=True)
+# gc.data = gc.data.iloc[:1000, :]
 
 track_data = '../data/my_connectome/tracking_data.txt'
 track = pd.read_csv(track_data, sep='\t', na_values='.', header=0, index_col=0)
@@ -113,7 +114,7 @@ for pathway in metab_pathway_members:
 
 # we'll make a cluster for each pathway that has combined at least z unique
 # genes and metabolites
-z = 1
+z = 10
 pathways = list(set(gene_pathway_names).union(set(metab_pathway_names)))
 num_unique = np.zeros(len(pathways))
 for i, pathway in enumerate(pathways):
@@ -186,14 +187,14 @@ eps = 1e-5
 max_iter = 500
 
 noise.fit(gsequences, glengths) # fit noise model to gene expression
-# noise._covars_ = noise._covars_ / 4
+#noise._covars_ = noise._covars_ / 2
 
 print np.bincount(assignments)
 models, assignments, converged = cluster(models, np.array([noise]), sequences, lengths, assignments, fixed, eps, max_iter, save_name='kegg_init_convergence.txt')
 print np.bincount(assignments)
 
 dump([labels, assignments, lengths, fixed, models, noise, eps, converged],
-     open('pathway_init_cluster.p'))
+     open('pathway_init_cluster.p', 'wb'))
 
 """
 k = 10 # number of models
