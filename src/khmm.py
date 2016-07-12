@@ -60,11 +60,20 @@ def cluster(models, noise_models, sequences, lengths, assignments, fixed, eps,
         os.mkdir(directory)
         f = open(save_name, 'w')
 
+    monitor_name = save_name + '.monitor'
+
     curr_log_prob = -1e1000
     diff = eps
     iteration = 1
+    f2 = open(monitor_name, 'w')
     print >> f, 'Iter = ', 0, ', Log Prob = ', curr_log_prob
+    print >> f, np.bincount(assignments)
+    print >> f2, 'Iter = ', 0, ', Log Prob = ', curr_log_prob
+    print >> f2, np.bincount(assignments)
+    f2.close()
     while iteration <= max_iter and diff >= eps:
+        f2 = open(monitor_name, 'a')
+        print models[0].transmat_
         train(models, sequences, lengths, assignments)
         assignments = assign(models, noise_models, sequences, lengths,
                              assignments, fixed)
@@ -75,6 +84,11 @@ def cluster(models, noise_models, sequences, lengths, assignments, fixed, eps,
         curr_log_prob = new_log_prob
         print >> f, 'Iter = ', iteration, ', Delta Log Prob = ', \
             diff, ', Log Prob = ', curr_log_prob
+        print >> f, np.bincount(assignments)
+        print >> f2, 'Iter = ', iteration, ', Delta Log Prob = ', \
+            diff, ', Log Prob = ', curr_log_prob
+        print >> f2, np.bincount(assignments)
+        f2.close()
         iteration += 1
 
     converged = (diff < eps)
@@ -99,6 +113,7 @@ def train(models, sequences, lengths, assignments):
 
 
 def assign(models, noise_models, sequences, lengths, assignments, fixed):
+    # import pdb; pdb.set_trace()
     scores = score_matrix(models, noise_models, sequences, lengths,
                           assignments, fixed)
 
@@ -165,7 +180,7 @@ def soft_leftright(steps, states_per_step):
         transmat[i, x:y] = p
     transmat[transmat.shape[0] - 1, transmat.shape[1] - 1] = 1
 
-    model = hmm.GaussianHMM(n_components=n_states)
+    model = hmm.GaussianHMM(n_components=n_states, init_params="cm", params="cmt")
     model.startprob_ = start
     model.transmat_ = transmat
 
@@ -189,7 +204,7 @@ def hard_leftright(steps, states_per_step):
         transmat[i, x:y] = p
     transmat[transmat.shape[0] - 1, transmat.shape[1] - 1] = 1
 
-    model = hmm.GaussianHMM(n_components=n_states)
+    model = hmm.GaussianHMM(n_components=n_states, init_params="cm", params="cm")
     model.startprob_ = start
     model.transmat_ = transmat
 
