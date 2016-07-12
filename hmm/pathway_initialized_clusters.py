@@ -56,23 +56,146 @@ metab = pd.DataFrame(metab.as_matrix(), index=metab.axes[0], columns=metab_sampl
 
 metab = metab.iloc[:106, :]
 
-mt = Preprocessing(metab.as_matrix(), metab.index.values, metab.columns.values,
-                   transpose=True)
+metab_id_file = '../data/my_connectome/metab_ids.txt'
+metab_id_table = np.genfromtxt(metab_id_file, delimiter='\t', skip_header=1, dtype=str)
+
+metab = metab.iloc[np.where(metab_id_table[:,2] != 'Not Found')[0], :]
+kegg_ids = metab_id_table[np.where(metab_id_table[:,2] != 'Not Found')[0], 2]
+
+mt = Preprocessing(metab.as_matrix(), kegg_ids, metab.columns.values,
+                   transpose=False)
 mt.log_transform(0)
 mt.scale()
 mt.clean(components=[0], update_data=True)
 
-kegglines = (open('../src/gsea/KEGG.gmt', 'r').read().splitlines())
+kegg_genesets = (open('../src/gsea/KEGG_genes', 'r').read().splitlines())
+kegg_metabsets = (open('../src/gsea/KEGG_metabolites', 'r').read().splitlines())
 
-pathway_members = []
-for i in range(len(kegglines)):
-    pathway_genes = kegglines[0].split('\t')[2:]
+
+gene_pathway_members = []
+gene_pathway_names = []
+for i in range(len(kegg_genesets)):
+    gene_pathway_names.append(kegg_genesets[i].split('\t')[0])
+    pathway_genes = kegg_genesets[i].split('\t')[2:]
     p_genes = []
     for gene in pathway_genes:
         if gene in gc.data.index:
             p_genes.append(gene)
-    pathway_members.append(p_genes)
+    gene_pathway_members.append(p_genes)
 
+
+metab_pathway_members = []
+metab_pathway_names = []
+for i in range(len(kegg_metabsets)):
+    metab_pathway_names.append(kegg_metabsets[i].split('\t')[0])
+    pathway_metabs = kegg_metabsets[i].split('\t')[2:]
+    p_metabs = []
+    for metab in pathway_metabs:
+        if metab in mt.data.index:
+            p_metabs.append(metab)
+    metab_pathway_members.append(p_metabs)
+
+# for now, remove genes and metabolites shared by pathways
+# these will get assigned to a cluster later
+unique_gene_pathway_members = []
+for pathway in gene_pathway_members:
+    unique = set(pathway).difference(*[set(otherpathway) for otherpathway in
+                                     gene_pathway_members if
+                                     otherpathway != pathway])
+    unique_gene_pathway_members.append(list(unique))
+
+unique_metab_pathway_members = []
+for pathway in metab_pathway_members:
+    unique = set(pathway).difference(*[set(otherpathway) for otherpathway in
+                                     metab_pathway_members if
+                                     otherpathway != pathway])
+    unique_metab_pathway_members.append(list(unique))
+
+# we'll make a cluster for each pathway that has combined at least z unique
+# genes and metabolites
+z = 1
+pathways = list(set(gene_pathway_names).union(set(metab_pathway_names)))
+num_unique = np.zeros(len(pathways))
+for i, pathway in enumerate(pathways):
+    try:
+        g_index = gene_pathway_names.index(pathway)
+        g = len(unique_gene_pathway_members[g_index])
+    except:
+        g = 0
+
+    try:
+        m_index = metab_pathway_names.index(pathway)
+        m = len(unique_metab_pathway_members[m_index])
+    except:
+        m = 0
+
+    num_unique[i] = g + m
+
+pathways = np.array(pathways)
+pathways = pathways[num_unique > z]
+pathways = pathways.tolist()
+
+k = len(pathways) # number of models
+# n = 5 # number of states
+m = gc.data.index.size
+models = np.empty(0)
+for i in range(k):
+    # models = np.append(models, hmm.GaussianHMM(n_components = n))
+    models = np.append(models, hard_leftright(43, 1))
+
+noise = hmm.GaussianHMM(n_components=1)
+
+msequences, mlengths, mlabels = df_to_sequence_list(mt.data)
+gsequences, glengths, glabels = df_to_sequence_list(gc.data.iloc[:m, :])
+
+sequences = np.concatenate((msequences, gsequences))
+lengths = np.concatenate((mlengths, glengths))
+
+# metabolites are either not assigned to a cluster (-1)
+# or they are initialized to one of the pathway clusters
+# if that metabolite is unique to that pathway
+massignments = np.array([k+1] * mlengths.size)
+for i, metab in enumerate(mlabels):
+    for j, pathway in enumerate(pathways):
+        if pathway in metab_pathway_names:
+            index = metab_pathway_names.index(pathway)
+            if metab in unique_metab_pathway_members[index]:
+                massignments[i] = j
+
+# genes are initialized to a pathway cluster if that gene is unique
+# to that pathway, otherwise they are assigned to the noise cluster
+# which is indexed at k
+gassignments = np.array([k] * glengths.size)
+for i, gene in enumerate(glabels):
+    for j, pathway in enumerate(pathways):
+        if pathway in gene_pathway_names:
+            index = gene_pathway_names.index(pathway)
+            if gene in unique_gene_pathway_members[index]:
+                gassignments[i] = j
+
+assignments = np.concatenate((massignments, gassignments))
+
+# set as initialization, no genes or metabolites are fixed
+mfixed = np.array([0] * mlengths.size)
+gfixed = np.array([0] * glengths.size)
+fixed = np.concatenate((mfixed, gfixed))
+
+labels = np.concatenate((mlabels, glabels))
+
+eps = 1e-5
+max_iter = 500
+
+noise.fit(gsequences, glengths) # fit noise model to gene expression
+# noise._covars_ = noise._covars_ / 4
+
+print np.bincount(assignments)
+models, assignments, converged = cluster(models, np.array([noise]), sequences, lengths, assignments, fixed, eps, max_iter, save_name='kegg_init_convergence.txt')
+print np.bincount(assignments)
+
+dump([labels, assignments, lengths, fixed, models, noise, eps, converged],
+     open('pathway_init_cluster.p'))
+
+"""
 k = 10 # number of models
 n = 5 # number of states
 m = 100 # number of genes
@@ -98,3 +221,4 @@ shape = noise.covars_.shape
 print np.bincount(assignments)
 models, assignments, converged = cluster(models, np.array([noise]), sequences, lengths, assignments, fixed, eps, max_iter, save_name='test2.txt')
 print np.bincount(assignments)
+"""
