@@ -155,7 +155,7 @@ class Preprocessing:
         if operator is '>':
             return lambda x: x > threshold
 
-    def clean(self, components=None, regress_out=None, update_data=True):
+    def clean(self, components=None, regress_out=None, update_data=True, scale_in=True, scale_out=True):
         """
         - components is an int/list of PCs to regress out from the data
           if you give an int n it will regress out the top n components
@@ -176,7 +176,9 @@ class Preprocessing:
             components = np.arange(components)
 
         print "Cleaning data..."
-        data = scale(self.data.as_matrix())
+        data = self.data.as_matrix()
+        if scale_in:
+            data = scale(data)
         U, S, V = Representation(data).svd()
         loadings = U[:, components]
 
@@ -190,7 +192,9 @@ class Preprocessing:
             # loadings = loadings.reshape(-1, len(components))
             new_data = self.regress_out(loadings, new_data, 0)
 
-        new_data = scale(new_data)
+        if scale_out:
+            new_data = scale(new_data)
+
         if update_data:
             self.data.iloc[:, :] = new_data
 
