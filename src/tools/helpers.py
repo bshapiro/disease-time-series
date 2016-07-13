@@ -284,6 +284,25 @@ def iterative_clean(p, clean_components, regress=None, transpose=False,
         plt_title = title + str(c)
         pltfunc(data=clean, title=plt_title, **kwargs)
 
+def get_common_set(list1, list2):
+    """ for two nparrays of labels
+    return an np array of the intersection set of the two
+    and indexes into the two original arrays in the order they
+    appear in the output array
+    """
+    common = np.empty(0)
+    list1_indices = np.empty(0)
+    list2_indices = np.empty(0)
+    for item in list1:
+        if (item in list2) and (item not in common):
+            common = np.append(common, item)
+            list1_indices = np.append(list1_indices,
+                                      np.where(list1 == item)[0])
+            list2_indices = np.append(list2_indices,
+                                      np.where(list2 == item)[0])
+    return common, list1_indices.astype(int), list2_indices.astype(int)
+
+
 
 def make_config_string(config, org_params):
     string = ''
