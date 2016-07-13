@@ -1,4 +1,4 @@
-from hmmlearn import hmm, utils
+from hmmlearn import hmm
 import os
 import numpy as np
 
@@ -45,22 +45,24 @@ def arr_to_sequence_list(arr):
 
 
 def cluster(models, noise_models, sequences, lengths, assignments, fixed, eps,
-            max_iter, save_name):
+            max_iter, save_name, odir=''):
     """
     models - are list of hmm objects
     noise_models - a list of noise models which are never retrained
     eps is the total log probability difference to declare convergence
     max_iter is the maximum number of iterations to perform
     """
+    filepath = odir.split('/') + save_name.split('/')
+    filepath = '/'.join(filepath)
     try:
-        f = open(save_name, 'w')
+        f = open(filepath, 'w')
     except:
-        directory = '/'.join(save_name.split('/')[:-1])
+        directory = '/'.join(filepath.split('/')[:-1])
         print "Creating directory...", directory
         os.mkdir(directory)
         f = open(save_name, 'w')
 
-    monitor_name = save_name + '.monitor'
+    monitor_name = filepath + '.monitor'
 
     curr_log_prob = -1e1000
     diff = eps
@@ -73,7 +75,6 @@ def cluster(models, noise_models, sequences, lengths, assignments, fixed, eps,
     f2.close()
     while iteration <= max_iter and diff >= eps:
         f2 = open(monitor_name, 'a')
-        print models[0].transmat_
         train(models, sequences, lengths, assignments)
         assignments = assign(models, noise_models, sequences, lengths,
                              assignments, fixed)
@@ -162,6 +163,7 @@ def get_seq_indices(lengths, in_set):
                                       ))
     return seq_indices.astype(int)
 
+
 def soft_leftright(steps, states_per_step):
     """
     generate a gaussian hmm initialized with a transition
@@ -180,11 +182,13 @@ def soft_leftright(steps, states_per_step):
         transmat[i, x:y] = p
     transmat[transmat.shape[0] - 1, transmat.shape[1] - 1] = 1
 
-    model = hmm.GaussianHMM(n_components=n_states, init_params="cm", params="cmt")
+    model = hmm.GaussianHMM(n_components=n_states, init_params="cm",
+                            params="cmt")
     model.startprob_ = start
     model.transmat_ = transmat
 
     return model
+
 
 def hard_leftright(steps, states_per_step):
     """
@@ -204,7 +208,8 @@ def hard_leftright(steps, states_per_step):
         transmat[i, x:y] = p
     transmat[transmat.shape[0] - 1, transmat.shape[1] - 1] = 1
 
-    model = hmm.GaussianHMM(n_components=n_states, init_params="cm", params="cm")
+    model = hmm.GaussianHMM(n_components=n_states, init_params="cm",
+                            params="cm")
     model.startprob_ = start
     model.transmat_ = transmat
 
