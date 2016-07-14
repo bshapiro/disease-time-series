@@ -30,7 +30,7 @@ parser.add_option("-s", "--scale_data", action="store_true",
 parser.add_option("-l", "--log_transform", action="store_true",
                   dest="log_transform", default=False,
                   help="If true performs log2 transform on data")
-parser.add_option("--smoothing", default=1, dest="smoothing"
+parser.add_option("--smoothing", default=1, dest="smoothing",
                   help="Smoothing value for log trasform")
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
@@ -366,6 +366,7 @@ if __name__ == "__main__":
         p.data.to_csv(path_or_buf=savename, sep=',')
     if options.saveas is 'tsv':
         p.data.to_csv(path_or_buf=savename, sep='\t')
+
     # TODO: be able to save for use in r and matlab
     # if options.saveas is 'r':
     #    from rpy2.robjects import pandas2ri
