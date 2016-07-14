@@ -30,8 +30,8 @@ parser.add_option("-s", "--scale_data", action="store_true",
 parser.add_option("-l", "--log_transform", action="store_true",
                   dest="log_transform", default=False,
                   help="If true performs log2 transform on data")
-parser.add_option("--log_shift", default=1,
-                  help="Shift raw values by this amount before log trasform")
+parser.add_option("--smoothing", default=1, dest="smoothing"
+                  help="Smoothing value for log trasform")
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
 parser.add_option("-o", "--operators", dest="operators", default=None,
@@ -232,18 +232,18 @@ class Preprocessing:
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
 
-    def scale(self):
+    def scale(self, axis=0):
         """
         Scale data so each feature has mean 0 variance 1
         """
-        self.data.loc[:, :] = scale(self.data.as_matrix())
+        self.data.loc[:, :] = scale(self.data.as_matrix(), axis)
 
-    def log_transform(self, shift):
+    def log_transform(self, smoothing):
         """
         log2 transform on data
-        adds shift value to avoid log transform on non-positive values
+        adds smoothing value to avoid log transform on non-positive values
         """
-        self.data.loc[:, :] = np.log2(self.data.as_matrix() + shift)
+        self.data.loc[:, :] = np.log2(self.data.as_matrix() + smoothing)
 
     def transpose(self):
         self.data = self.data.T
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     Order of operations:
     1. load the file, create preprocessing object
     2. perform any filtering specified
-    3. log transform data if specified, shift by value of log_shift (default 1)
+    3. log transform data if specified, smoothin by value of log_smoothing (default 1)
     4. scale if specified (scaled columns to have mean 0 variance 1)
     5. data cleaning on pcs and values specified in regress_rows/regress_cols
     6. save output
@@ -341,7 +341,7 @@ if __name__ == "__main__":
             p.filter(f)
 
     if options.log_transform:
-        p.log_transform(options.log_shift)
+        p.log_transform(options.smoothing)
 
     if options.scale_data:
         p.scale()
