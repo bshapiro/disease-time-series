@@ -72,6 +72,13 @@ liver_enzymes = np.array(['GOT1', 'GOT2', 'GPT' ])
 
 pbmc = np.array(['blood:mo', 'blood:ly'])
 alc = np.array(['prevevening:Alcohol', 'sameevening:Alcohol'])
+psor = np.array(['prevevening:Psoriasisseverity', 'sameevening:Psoriasisseverity'])
+
+t_cell_genes1 = np.genfromtxt('psoriasis/t_cell_receptor_signalling_pathway.txt', delimiter='\t', usecols=[0], dtype=str)
+t_cell_genes2 = np.genfromtxt('psoriasis/t_cell_activation_involved_in_immune_response.txt', delimiter='\t', usecols=[0], dtype=str)
+t_cell_genes3 = np.genfromtxt('psoriasis/t_cell_activation.txt', delimiter='\t', usecols=[0], dtype=str)
+
+
 # whittle it down to genes that we have
 mo_genes = []
 for gene in mo_candidates:
@@ -88,10 +95,29 @@ for gene in alcohol_candidates3:
     if gene in gc.data.index:
         alcohol_genes.append(gene)
 
+psoriasis_genes1 = []
+for gene in t_cell_genes1:
+    gene = gene.upper()
+    if gene in gc.data.index:
+        psoriasis_genes1.append(gene)
+psoriasis_genes2 = []
+for gene in t_cell_genes2:
+    gene = gene.upper()
+    if gene in gc.data.index:
+        psoriasis_genes2.append(gene)
+psoriasis_genes3 = []
+for gene in t_cell_genes3:
+    gene = gene.upper()
+    if gene in gc.data.index:
+        psoriasis_genes3.append(gene)
+
 
 mo_genes = np.array(mo_genes)
 ly_genes = np.array(ly_genes)
 alcohol_genes = np.array(alcohol_genes)
+psoriasis_genes1 = np.array(psoriasis_genes1)
+psoriasis_genes2 = np.array(psoriasis_genes2)
+psoriasis_genes3 = np.array(psoriasis_genes3)
 # on raw data
 def raw():
     r, p = associate(gc.data, track, mo_genes, pbmc)
@@ -254,6 +280,74 @@ def alcohol():
         plt_title = str(pcs) + ' Alcohol Marker p'
         HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title)
 
+def psoriasis():
+    for i in range(5):
+        pcs = np.arange(i)
+        clean = gc.clean(components=pcs, regress_out=[(goodrin, 1), ], update_data=False)
+        clean_df = pd.DataFrame(clean, index=gc.data.index, columns=gc.data.columns)
+
+        savename = 'rin' + str(pcs)
+        r, p = associate(clean_df, track, psoriasis_genes1, psor, save=True, savename=savename, outpath='psoriasis/1/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/1/', x_rot='horizontal')
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/1/', x_rot='horizontal')
+
+        r, p = associate(clean_df, track, psoriasis_genes2, psor, save=True, savename=savename, outpath='psoriasis/2/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/2/', x_rot='horizontal')
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/2/', x_rot='horizontal')
+
+        r, p = associate(clean_df, track, psoriasis_genes3, psor, save=True, savename=savename, outpath='psoriasis/3/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/3/', x_rot='horizontal')
+        plt_title = 'rin+' + str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/3/', x_rot='horizontal')
+
+
+
+    for i in range(5):
+        pcs = np.arange(i)
+        clean = gc.clean(components=pcs, regress_out=None, update_data=False)
+        clean_df = pd.DataFrame(clean, index=gc.data.index, columns=gc.data.columns)
+
+        savename = str(pcs)
+        r, p = associate(clean_df, track, psoriasis_genes1, psor, save=True, savename=savename, outpath='psoriasis/1/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/1/', x_rot='horizontal')
+        plt_title = str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/1/', x_rot='horizontal')
+
+        r, p = associate(clean_df, track, psoriasis_genes2, psor, save=True, savename=savename, outpath='psoriasis/2/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/2/', x_rot='horizontal')
+        plt_title = str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/2/', x_rot='horizontal')
+
+        r, p = associate(clean_df, track, psoriasis_genes3, psor, save=True, savename=savename, outpath='psoriasis/3/')
+        r = r.abs()
+        p += 1e-20
+        p = -1 * np.log10(p)
+        plt_title = str(pcs) + ' Psoriasis Marker rho'
+        HeatMap(r, r.index.values, r.columns.values, 0, 1, title=plt_title, odir='psoriasis/3/', x_rot='horizontal')
+        plt_title = str(pcs) + ' Psoriasis Marker p'
+        HeatMap(p, p.index.values, p.columns.values, 0, 5, title=plt_title, odir='psoriasis/3/', x_rot='horizontal')
 
 """
 meth = 'spearman'

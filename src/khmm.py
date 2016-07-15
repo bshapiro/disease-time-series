@@ -45,7 +45,7 @@ def arr_to_sequence_list(arr):
 
 
 def cluster(models, noise_models, sequences, lengths, assignments, fixed, eps,
-            max_iter, save_name, odir=''):
+            max_iter, save_name, odir='./'):
     """
     models - are list of hmm objects
     noise_models - a list of noise models which are never retrained
@@ -120,7 +120,7 @@ def assign(models, noise_models, sequences, lengths, assignments, fixed):
 
     # reassign to model that minimize log probability
     fixed_assignments = assignments[np.where(fixed)[0]]
-    new_assignemnts = np.argmax(scores, axis=1)
+    new_assignemnts = np.argmin(scores, axis=1)
     new_assignemnts[np.where(fixed)[0]] = fixed_assignments
     return new_assignemnts
 
@@ -186,6 +186,42 @@ def soft_leftright(steps, states_per_step):
                             params="cmt")
     model.startprob_ = start
     model.transmat_ = transmat
+
+    return model
+
+def soft_leftright_forced(steps, states_per_step):
+    """
+    generate a gaussian hmm initialized with a transition
+    matrix that forces the learning of a left-right hmm
+    soft because it can stay in the same timestep
+    forced because the model imposes that we must go through
+    all time steps
+    """
+    n_states = steps * states_per_step + 1
+    start = np.zeros(n_states)
+    start[:states_per_step] = float(1) / states_per_step
+    transmat = np.eye(n_states)
+    for i in range(transmat.shape[0]):
+        # p = float(1) / (1 + states_per_step)
+        p = 1
+        transmat[i, i] = p
+        x = ((i / states_per_step) + 1) * states_per_step
+        y = ((i / states_per_step) + 2) * states_per_step
+        transmat[i, x:y] = p
+
+    transmat[transmat.shape[0] -1, transmat.shape[1] - 1] = 1
+
+    for i in range(transmat.shape[0]):
+        transmat[i, :] = transmat[i, :] / transmat[i, :].sum()
+
+    means = np.random.randn(n_states, 1)
+    means[n_states-1, 0] = 1e3
+
+    model = hmm.GaussianHMM(n_components=n_states, init_params="c",
+                            params="cmt")
+    model.startprob_ = start
+    model.transmat_ = transmat
+    model.means_ = means
 
     return model
 

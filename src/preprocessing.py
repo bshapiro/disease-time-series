@@ -9,29 +9,47 @@ from sklearn.linear_model import LinearRegression
 from representation import Representation
 
 parser = OptionParser()
+# input options
 parser.add_option("--in_directory", dest="in_dir", default="",
                   help="Directory to look for files, default curr directory")
 parser.add_option("-d", "--dataset", dest="dataset", default=None,
                   help="Dataset, the file the the data matrix in it")
 parser.add_option("--filetype", dest="filetype", default='pickle',
                   help="File type of data file ('csv', 'tsv', 'pickle')")
+
 parser.add_option("--has_row_labels", action="store_true",
                   dest="has_row_labels", default=False,
                   help="If True, first column of dataset file are labels")
 parser.add_option("--has_col_labels", action="store_true",
                   dest="has_col_labels", default=False,
                   help="If True, first column of dataset file are labels")
+
+# transpose option
 parser.add_option("--transpose_data",  action="store_true",
                   dest="transpose", default=False,
                   help="If True, tranpose the data matrix")
-parser.add_option("-s", "--scale_data", action="store_true",
-                  dest="scale_data", default=False,
-                  help="If true scales data so columns have mean 0 variance 1")
+
+# log-transform options
 parser.add_option("-l", "--log_transform", action="store_true",
                   dest="log_transform", default=False,
                   help="If true performs log2 transform on data")
 parser.add_option("--smoothing", default=1, dest="smoothing",
                   help="Smoothing value for log trasform")
+
+# scaling options
+parser.add_option("-s", "--scale_data", action="store_true",
+                  dest="scale_data", default=False,
+                  help="If true scales data (default to mean 0 variance 1)")
+parser.add_option("--scale_axis", dest="scale_axis", default=0,
+                  help="Axis to scale one")
+parser.add_option("--center_off", action="store_false",
+                  dest="center_off", default=True,
+                  help="If enabled scale won't attempt to center data")
+parser.add_option("--unit_std_off", action="store_false",
+                  dest="unit_std_off", default=True,
+                  help="If enabled scale won't scale to unit-normal")
+
+# filtering options
 parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
                   help="List of data to filter on")
 parser.add_option("-o", "--operators", dest="operators", default=None,
@@ -40,12 +58,16 @@ parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
                   help="List of thresholds for operators")
 parser.add_option("-a", "--filter_axes", dest="filter_axes", default=None,
                   help="List of axes for each filter operation")
+
+# cleaning options
 parser.add_option("-p", "--principal_components", dest="principal_components",
                   default=[], help="List of PCs to regress out")
 parser.add_option("--regress_cols", dest="regress_cols", default=None,
                   help="Regress data on columns of matrix")
 parser.add_option("--regress_rows", dest="regress_rows", default=None,
                   help="Regress data on rows of matrix")
+
+# output options
 parser.add_option("--odir", dest="out_directory", default='',
                   help="Output directory+prefix to prepend to any saved output"
                   )
@@ -155,7 +177,8 @@ class Preprocessing:
         if operator is '>':
             return lambda x: x > threshold
 
-    def clean(self, components=None, regress_out=None, update_data=True, scale_in=True, scale_out=True):
+    def clean(self, components=None, regress_out=None, update_data=True,
+              scale_in=True, scale_out=False):
         """
         - components is an int/list of PCs to regress out from the data
           if you give an int n it will regress out the top n components
@@ -232,11 +255,12 @@ class Preprocessing:
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
 
-    def scale(self, axis=0):
+    def scale(self, axis=0, with_mean=True, with_std=True):
         """
         Scale data so each feature has mean 0 variance 1
         """
-        self.data.loc[:, :] = scale(self.data.as_matrix(), axis)
+        self.data.loc[:, :] = scale(self.data.as_matrix(), axis,
+                                    with_mean=with_mean, with_std=with_std)
 
     def log_transform(self, smoothing):
         """
@@ -301,7 +325,8 @@ if __name__ == "__main__":
     Order of operations:
     1. load the file, create preprocessing object
     2. perform any filtering specified
-    3. log transform data if specified, smoothin by value of log_smoothing (default 1)
+    3. log transform data if specified, smoothin by value of log_smoothing
+       (default 1)
     4. scale if specified (scaled columns to have mean 0 variance 1)
     5. data cleaning on pcs and values specified in regress_rows/regress_cols
     6. save output
@@ -344,8 +369,7 @@ if __name__ == "__main__":
         p.log_transform(options.smoothing)
 
     if options.scale_data:
-        p.scale()
-
+        p.scale(options.scale_axis, options.center_off, options.unit_std_off)
     regress_rows = options.regress_rows
     regress_cols = options.regress_cols
     pc = options.principal_components

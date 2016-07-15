@@ -1,6 +1,5 @@
 import addpath
 import numpy as np
-from pickle import dump
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 from load_data import gc, mt

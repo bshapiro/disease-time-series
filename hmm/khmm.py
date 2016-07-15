@@ -15,7 +15,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
     except:
         directory = '/'.join(filepath.split('/')[:-1])
         print "Creating directory...", directory
-        os.mkdir(directory)
+        os.makedirs(directory)
         f = open(filepath, 'w')
     f.close()
 
