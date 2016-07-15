@@ -27,8 +27,8 @@ starts = np.array([1])
 noise = HiddenMarkovModel.from_matrix(noise_trans, noise_dist, starts)
 
 
-max_iter = 50  # max iterations
-eps = 1e-5  # convergence threshold
+max_iter = 500  # max iterations
+eps = 1e-6  # convergence threshold
 k = k_range[0]
 n = state_range[0]
 

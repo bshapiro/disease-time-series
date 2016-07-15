@@ -8,7 +8,7 @@ from load_kegg_pathways import load_kegg_pathways
 THREADCOUNT = 12
 
 m = gc.data.index.size  # restricts number of genes, used for local testing
-state_range = [5, 10, 20, 30, 40, 50, 100]
+state_range = [5, 10, 25, 50, 100]
 z_range = [1, 5, 10, 20]
 
 msequences, mlabels = df_to_sequence_list(mt.data)
@@ -32,8 +32,8 @@ noise = HiddenMarkovModel.from_matrix(noise_trans, noise_dist, starts)
 
 
 odir_base = 'pathway_init'  # directory to save files to
-max_iter = 200  # max iterations
-eps = 1e-5  # convergence threshold
+max_iter = 500  # max iterations
+eps = 1e-6  # convergence threshold
 
 for n in state_range:
     for z in z_range:
