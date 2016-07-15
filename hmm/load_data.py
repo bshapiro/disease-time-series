@@ -20,8 +20,13 @@ gc.filter((rin, '>', 6, 0))
 
 gc.clean(components=[0,1,2], regress_out=[(goodrin, 0)], update_data=True, scale_out=False)
 gc.transpose()
-gc.scale()
-# gc.data = gc.data.iloc[:1000, :]
+gc.scale(1)
+
+#maxz = np.abs(gc.data.as_matrix()).max(1)
+#gc.filter((maxz, '>', 2, 0))
+
+
+gc.data = gc.data.iloc[:1000, :]
 
 track_data = '../data/my_connectome/tracking_data.txt'
 track = pd.read_csv(track_data, sep='\t', na_values='.', header=0, index_col=0)
