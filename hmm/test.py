@@ -43,7 +43,7 @@ model2.add_transition(s3, s3, 0.70 )
 model2.add_transition(s3, model2.end, 0.30 )
 model2.bake()
 """
-gc, mt, track = load_data(1000)
+gc, mt, track = load_data(100)
 data, labels = df_to_sequence_list(gc.data)
 assignments = np.array([i % 3 for i in range(labels.size)])
 model1 = init_gaussian_hmm(data[np.where(assignments == 0)[0], :], 3, '1')
