@@ -98,7 +98,7 @@ def train(models, sequences, assignments, n_threads):
         if in_model.size != 0:
             sequence_set = sequences[in_model, :]
             model.thaw_distributions()
-            model.fit(sequence_set, n_jobs=n_threads)
+            model.fit(sequence_set, verbose=False, n_jobs=n_threads)
             # if isnan(model.fit(sequence_set)):
             #    models[i] = prior_model
 
