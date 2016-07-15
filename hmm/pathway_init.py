@@ -2,12 +2,13 @@ import addpath
 import numpy as np
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
-from load_data import gc, mt
+from load_data import load_data
 from load_kegg_pathways import load_kegg_pathways
 
-THREADCOUNT = 12
+THREADCOUNT = 1
 
-m = gc.data.index.size  # restricts number of genes, used for local testing
+m = 1000  # restricts number of genes, used for local testing
+gc, mt, track = load_data(m)
 state_range = [5, 10, 25, 50, 100]
 z_range = [1, 5, 10, 20]
 
@@ -39,7 +40,7 @@ for n in state_range:
     for z in z_range:
         pathways, metab_pathway_names, gene_pathway_names, \
          unique_metab_pathway_members, unique_gene_pathway_members = \
-         load_kegg_pathways(z)
+         load_kegg_pathways(gc, mt, z)
 
         k = len(pathways)
         # number of pathways = number of models

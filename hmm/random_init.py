@@ -1,19 +1,20 @@
 import addpath
 import numpy as np
+from load_data import load_data
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
-from load_data import gc, mt
 
-THREADCOUNT = 12
+THREADCOUNT = 1
 
-m = gc.data.index.size  # restricts number of genes, used for local testing
+m = 500  # restricts number of genes, used for local testing
+gc, mt, track = load_data(m)
 
 # khmm clustering over a range of k and states-per model
-k_range = [10, 50, 100, 200, 300, 500]
-state_range = [5, 10, 20, 30, 40, 50, 100]
+k_range = [10, 50, 100, 200, 500]
+state_range = [5, 10, 25, 50, 100]
 
 msequences, mlabels = df_to_sequence_list(mt.data)
-gsequences, glabels = df_to_sequence_list(gc.data.iloc[:m, :])
+gsequences, glabels = df_to_sequence_list(gc.data)
 
 sequences = np.concatenate((msequences, gsequences), 0)
 labels = np.concatenate((mlabels, glabels))

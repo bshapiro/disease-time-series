@@ -24,7 +24,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
                                    assignments)
 
     with open(filepath, 'a') as f:
-        print >> f, 'Iter = 0', ', Log Prob = ', str(curr_log_prob), \
+        print >> f, 'Init', ', Log Prob = ', str(curr_log_prob), \
               ', Assignments= ', str(np.bincount(assignments))
     # iterative model assignment
     iteration = 0
@@ -46,7 +46,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
         curr_log_prob = new_log_prob
 
         with open(filepath, 'a') as f:
-            print >> f, 'Iter = ', str(iteration), ', Log Prob = ',  \
+            print >> f, 'Iter = ', str(iteration), \
                   'Delta = ', str(delta), ', Log Prob: ', str(curr_log_prob), \
                   ', Assignments= ', str(np.bincount(assignments))
         iteration += 1

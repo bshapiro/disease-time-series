@@ -1,6 +1,6 @@
 from pomegranate import *
 import numpy as np
-from load_data import gc
+from load_data import load_data
 from khmm import *
 """
 d1 = NormalDistribution(-1, 1)
@@ -43,9 +43,9 @@ model2.add_transition(s3, s3, 0.70 )
 model2.add_transition(s3, model2.end, 0.30 )
 model2.bake()
 """
-
-data, labels = df_to_sequence_list(gc.data.iloc[:100, :])
-assignments = np.array([0] * 33 + [1] * 33 + [2] * 34)
+gc, mt, track = load_data(1000)
+data, labels = df_to_sequence_list(gc.data)
+assignments = np.array([i % 3 for i in range(labels.size)])
 model1 = init_gaussian_hmm(data[np.where(assignments == 0)[0], :], 3, '1')
 model2 = init_gaussian_hmm(data[np.where(assignments == 1)[0], :], 3, '2')
 model3 = init_gaussian_hmm(data[np.where(assignments == 2)[0], :], 3, '3')

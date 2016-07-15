@@ -1,8 +1,7 @@
 import numpy as np
-from load_data import gc, mt
 
 
-def load_kegg_pathways(z):
+def load_kegg_pathways(gc, mt, z):
     kegg_genesets = (open('../src/gsea/KEGG_genes', 'r').read().splitlines())
     kegg_metabsets = (open('../src/gsea/KEGG_metabolites', 'r').read().
                       splitlines())
