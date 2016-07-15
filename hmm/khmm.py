@@ -1,5 +1,6 @@
 from pomegranate import NormalDistribution, HiddenMarkovModel
 import math
+import time
 import numpy as np
 import os
 
@@ -26,10 +27,12 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
     # intial probability calculation
     curr_log_prob = total_log_prob(models, noise_models, sequences,
                                    assignments)
+    start_time = time.time()
 
     with open(filepath, 'a') as f:
         print >> f, 'Init', ', Log Prob = ', str(curr_log_prob), \
-              ', Assignments= ', str(np.bincount(assignments))
+              ', Assignments = ', str(np.bincount(assignments)), \
+              ', time-elapsed = 00:00:00'
     # iterative model assignment
     iteration = 0
     prior_assignments = np.empty([])
@@ -48,12 +51,14 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
                                       sequences, assignments)
         delta = new_log_prob - curr_log_prob
         curr_log_prob = new_log_prob
+        time_elapsed = time.strftime("%H:%M:%S",
+                                     time.gmtime(time.time() - start_time))
 
         with open(filepath, 'a') as f:
             print >> f, 'Iter = ', str(iteration), \
                   'Delta = ', str(delta), ', Log Prob: ', str(curr_log_prob), \
-                  ', Assignments= ', str(np.bincount(assignments))
-        iteration += 1
+                  ', Assignments= ', str(np.bincount(assignments)), \
+                  'time elapsed = ', time_elapsed
 
         if delta < 0 and eps > 0:
             models = prior_models
@@ -65,6 +70,8 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
             with open(filepath, 'a') as f:
                 print >> f, 'Local optimum found at iter: ', (iteration)
             break
+
+        iteration += 1
 
     # write conlusive lines in report
     converged = (delta < eps)
@@ -91,7 +98,8 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
         for i, model in enumerate(models):
             f.write(model.name)
             f.write('\n')
-            f.write(str(labels[np.where(assignments == i)]))
+            f.write('\t'.join(labels[np.where(assignments == i)]))
+            # f.write(str(labels[np.where(assignments == i)]))
             f.write('\n')
 
     return models, assignments, converged
@@ -106,7 +114,7 @@ def train(models, sequences, assignments):
         if in_model.size != 0:
             sequence_set = sequences[in_model, :]
             model.thaw_distributions()
-            model.fit(sequence_set, verbose=SHOW_TRAINING, alogrithm=ALGORITHM,
+            model.fit(sequence_set, verbose=SHOW_TRAINING, algorithm=ALGORITHM,
                       n_jobs=THREADCOUNT)
             # if isnan(model.fit(sequence_set)):
             #    models[i] = prior_model
