@@ -1,12 +1,9 @@
-import addpath
 import numpy as np
 from load_data import load_data
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
-THREADCOUNT = 1
-
-m = 500  # restricts number of genes, used for local testing
+m = 500  # restricts number of genes, used for local testing, None for all
 gc, mt, track = load_data(m)
 
 # khmm clustering over a range of k and states-per model
@@ -60,8 +57,7 @@ for k in k_range:
                                              assignments=assignments,
                                              labels=labels, fixed=fixed,
                                              eps=eps, max_it=max_iter,
-                                             odir=odir,
-                                             n_threads=THREADCOUNT)
+                                             odir=odir)
         except:
             error_file = odir.split('/') + ['errors.txt']
             error_file = '/'.join(error_file)

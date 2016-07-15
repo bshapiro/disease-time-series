@@ -3,9 +3,13 @@ import math
 import numpy as np
 import os
 
+THREADCOUNT = 12
+ALGORITHM = 'baum-welch'
+SHOW_TRAINING = True
+
 
 def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
-            max_it, odir='./', n_threads=1):
+            max_it, odir='./'):
 
     # open path to output file
     filepath = odir.split('/') + ['iteration_report.txt']
@@ -38,7 +42,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
         assignments = assign(models, noise_models, sequences,
                              assignments, fixed)
 
-        train(models, sequences, assignments, n_threads)
+        train(models, sequences, assignments)
 
         new_log_prob = total_log_prob(models, noise_models,
                                       sequences, assignments)
@@ -93,7 +97,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
     return models, assignments, converged
 
 
-def train(models, sequences, assignments, n_threads):
+def train(models, sequences, assignments):
 
     # train the models based on current assignment
     for i, model in enumerate(models):
@@ -102,7 +106,8 @@ def train(models, sequences, assignments, n_threads):
         if in_model.size != 0:
             sequence_set = sequences[in_model, :]
             model.thaw_distributions()
-            model.fit(sequence_set, verbose=False, n_jobs=n_threads)
+            model.fit(sequence_set, verbose=SHOW_TRAINING, alogrithm=ALGORITHM,
+                      n_jobs=THREADCOUNT)
             # if isnan(model.fit(sequence_set)):
             #    models[i] = prior_model
 

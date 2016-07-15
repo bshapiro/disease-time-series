@@ -5,8 +5,6 @@ from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 from load_data import load_data
 from load_kegg_pathways import load_kegg_pathways
 
-THREADCOUNT = 1
-
 m = 1000  # restricts number of genes, used for local testing
 gc, mt, track = load_data(m)
 state_range = [5, 10, 25, 50, 100]
@@ -91,8 +89,7 @@ for n in state_range:
                                              assignments=assignments,
                                              labels=labels, fixed=fixed,
                                              eps=eps, max_it=max_iter,
-                                             odir=odir,
-                                             n_threads=THREADCOUNT)
+                                             odir=odir)
         except:
             error_file = odir.split('/') + ['errors.txt']
             error_file = '/'.join(error_file)
