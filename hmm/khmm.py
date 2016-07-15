@@ -75,16 +75,20 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
 
     # write json representations of models
     for model in models:
-        filepath = '/'.join(odir.split('/')) + model.name
+        filepath = odir.split('/') + [model.name]
+        filepath = '/'.join(filepath)
         with open(filepath, 'w') as f:
             f.write(model.to_json())
 
     # write cluster assignments
-    filepath = '/'.join(odir.split('/')) + 'assignments'
+    filepath = odir.split('/') + ['assignments.txt']
+    filepath = '/'.join(filepath)
     with open(filepath, 'w') as f:
         for i, model in enumerate(models):
             f.write(model.name)
+            f.write('\n')
             f.write(str(labels[np.where(assignments == i)]))
+            f.write('\n')
 
     return models, assignments, converged
 
@@ -174,8 +178,9 @@ def init_gaussian_hmm(sequences, n_states, model_id):
         dists.append(NormalDistribution.from_samples(sequences[:, in_state]))
     """
 
-    # make distrobutions from random subsets of data
+    # make distrobutions from random subsets of timepoints
     x = int(math.ceil(sequences.shape[1] / float(n_states)))
+    # x = math.min(3, x)
 
     dists = []
     for i in range(n_states):
