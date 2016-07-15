@@ -1,14 +1,11 @@
-import addpath
-from src.khmm import *
-from src.tools.helpers import *
 import numpy as np
-from pickle import load, dump
-from hmmlearn import hmm, utils
 from load_data import gc, mt
+
 
 def load_kegg_pathways(z):
     kegg_genesets = (open('../src/gsea/KEGG_genes', 'r').read().splitlines())
-    kegg_metabsets = (open('../src/gsea/KEGG_metabolites', 'r').read().splitlines())
+    kegg_metabsets = (open('../src/gsea/KEGG_metabolites', 'r').read().
+                      splitlines())
 
     gene_pathway_members = []
     gene_pathway_names = []
@@ -36,16 +33,16 @@ def load_kegg_pathways(z):
     # these will get assigned to a cluster later
     unique_gene_pathway_members = []
     for pathway in gene_pathway_members:
-        unique = set(pathway).difference(*[set(otherpathway) for otherpathway in
-                                         gene_pathway_members if
-                                         otherpathway != pathway])
+        unique = set(pathway).difference(*[set(otherpathway) for otherpathway
+                                         in gene_pathway_members
+                                         if otherpathway != pathway])
         unique_gene_pathway_members.append(list(unique))
 
     unique_metab_pathway_members = []
     for pathway in metab_pathway_members:
-        unique = set(pathway).difference(*[set(otherpathway) for otherpathway in
-                                         metab_pathway_members if
-                                         otherpathway != pathway])
+        unique = set(pathway).difference(*[set(otherpathway) for otherpathway
+                                         in metab_pathway_members
+                                         if otherpathway != pathway])
         unique_metab_pathway_members.append(list(unique))
 
     # we'll make a cluster for each pathway that has combined at least z unique

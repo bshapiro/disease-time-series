@@ -175,7 +175,7 @@ def init_gaussian_hmm(sequences, n_states, model_id):
     """
 
     # make distrobutions from random subsets of data
-    x = math.ceil(sequences.shape[1] / float(n_states))
+    x = int(math.ceil(sequences.shape[1] / float(n_states)))
 
     dists = []
     for i in range(n_states):
