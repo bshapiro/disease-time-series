@@ -1,4 +1,5 @@
 import addpath
+import sys
 import numpy as np
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
@@ -92,6 +93,7 @@ for n in state_range:
             error_file = '/'.join(error_file)
             f = open(error_file, 'a')
             print >> f, 'error computing parameters for: ', collection_id
+            print >> f, "Unexpected error:", sys.exc_info()[0]
             f.close()
 
 

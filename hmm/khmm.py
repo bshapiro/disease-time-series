@@ -65,7 +65,6 @@ def cluster(models, sequences, assignments, labels, fixed, eps,
                                     FIT_ITER)
 
         # report improvement
-        print assignments
         detla, curr_log_prob = report(models=models,
                                       sequences=sequences,
                                       assignments=assignments,
@@ -74,14 +73,9 @@ def cluster(models, sequences, assignments, labels, fixed, eps,
                                       curr_log_prob=curr_log_prob,
                                       start_time=start_time)
 
-        """
-        if delta < 0 and eps > 0:
-            models = prior_models
-            assignments = prior_assignments
-            with open(filepath, 'a') as f:
-                print >> f, 'Local optimum found at iter: ', (iteration - 1)
-            break
-        """
+        print 'Iteration: ', iteration, ', Delta = ', detla, \
+              ', Log Prob = ', curr_log_prob
+
         if delta < eps or prior_assignments == assignments:
             with open(filepath, 'a') as f:
                 print >> f, 'Local optimum found at iter: ', (iteration)

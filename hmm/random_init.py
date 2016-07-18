@@ -1,9 +1,10 @@
 import numpy as np
+import sys
 from load_data import load_data
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
-m = None  # restricts number of genes, used for local testing, None for all
+m = 500  # restricts number of genes, used for local testing, None for all
 gc, mt, track = load_data(m)
 
 # khmm clustering over a range of k and states-per model
@@ -75,4 +76,5 @@ for n in state_range:
             error_file = '/'.join(error_file)
             f = open(error_file, 'a')
             print >> f, 'error computing parameters for: ', collection_id
+            print >> f, "Unexpected error:", sys.exc_info()[0]
             f.close()
