@@ -3,7 +3,7 @@ from load_data import load_data
 from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
-m = 500  # restricts number of genes, used for local testing, None for all
+m = None  # restricts number of genes, used for local testing, None for all
 gc, mt, track = load_data(m)
 
 # khmm clustering over a range of k and states-per model
@@ -36,60 +36,43 @@ d_range = [0, 1, 5, 10, 15, 30]
 # fixed = np.array([0] * oassignments.size)
 for n in state_range:
     for k in k_range:
-        odir_base = 'rand_init'  # directory to save files to
-        collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
-        odir = odir_base + '/' + collection_id
-
-        print 'Learning: ', collection_id
-
-        # generate random initial assignments
-        # initialize models on random assignments
-        randassign = np.random.randint(k, size=labels.size)
-        assignments = {}
-        models = {}
-        for i in range(k):
-            model_id = str(i)
-            assignments[model_id] = np.where(randassign == i)[0].tolist()
-            in_model = assignments[model_id]
-            models[model_id] = init_gaussian_hmm(sequences[in_model, :],
-                                                 n, model_id)
-
-        # add noise model
-        models['noise'] = noise
-        assignments['noise'] = []
-
-        # all are un-fixed
-        fixed = np.array([0] * labels.size)
-
-        # perform clustering
-        models, assignments, c = cluster(models=models,
-                                         sequences=sequences,
-                                         assignments=assignments,
-                                         labels=labels, fixed=fixed,
-                                         eps=eps, max_it=max_iter,
-                                         odir=odir)
-        """
         try:
-            # initialize models
-            models = np.empty(0)
-            for i in range(k):
-                in_model = np.where(assignments == i)[0]
-                model = init_gaussian_hmm(sequences[np.where(assignments == 0)
-                                          [0], :],
-                                          n, model_id=str(i))
-                models = np.append(models, model)
+            odir_base = 'rand_init'  # directory to save files to
+            collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
+            odir = odir_base + '/' + collection_id
 
+            print 'Learning: ', collection_id
+
+            # generate random initial assignments
+            # initialize models on random assignments
+            randassign = np.random.randint(k, size=labels.size)
+            assignments = {}
+            models = {}
+            for i in range(k):
+                model_id = str(i)
+                assignments[model_id] = np.where(randassign == i)[0].tolist()
+                in_model = assignments[model_id]
+                models[model_id] = init_gaussian_hmm(sequences[in_model, :],
+                                                     n, model_id)
+
+            # add noise model
+            models['noise'] = noise
+            assignments['noise'] = []
+
+            # all are un-fixed
+            fixed = np.array([0] * labels.size)
+
+            # perform clustering
             models, assignments, c = cluster(models=models,
-                                             noise_model=noise,
                                              sequences=sequences,
                                              assignments=assignments,
                                              labels=labels, fixed=fixed,
                                              eps=eps, max_it=max_iter,
                                              odir=odir)
+
         except:
             error_file = odir.split('/') + ['errors.txt']
             error_file = '/'.join(error_file)
             f = open(error_file, 'a')
             print >> f, 'error computing parameters for: ', collection_id
             f.close()
-        """
