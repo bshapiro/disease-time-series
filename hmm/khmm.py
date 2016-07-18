@@ -1,17 +1,20 @@
 from pomegranate import NormalDistribution, HiddenMarkovModel
+from collections import defaultdict
 import math
 import time
 import numpy as np
 import os
 
-THREADCOUNT = 12
-ALGORITHM = 'baum-welch'
+THREADCOUNT = 1
 SHOW_TRAINING = True
+ALGORITHM = 'baum-welch'
+FIT_EPS = 1e-3  # Convergence threshold of fit
+FIT_ITER = 1e3  # Max iter of fit function
 
 
-def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
+def cluster(models, sequences, assignments, labels, fixed, eps,
             max_it, odir='./'):
-
+    # import pdb; pdb.set_trace()
     # open path to output file
     filepath = odir.split('/') + ['iteration_report.txt']
     filepath = '/'.join(filepath)
@@ -24,49 +27,62 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
         f = open(filepath, 'w')
     f.close()
 
+    # show performance under noise model -- lower bound for performance
+    noise_model = models['noise']
+    noise_log_prob = noise_model.summarize(sequences)
+
+    with open(filepath, 'a') as f:
+        print >> f, 'Log Prob Lower Bound = ', noise_log_prob, '\n'
+
+    # initial model training
+    models, assignments = train(models, sequences, assignments, FIT_EPS,
+                                FIT_ITER)
+
     # intial probability calculation
-    curr_log_prob = total_log_prob(models, noise_models, sequences,
+    curr_log_prob = total_log_prob(models, sequences,
                                    assignments)
     start_time = time.time()
 
     with open(filepath, 'a') as f:
-        print >> f, 'Init', ', Log Prob = ', str(curr_log_prob), \
-              ', Assignments = ', str(np.bincount(assignments)), \
-              ', time-elapsed = 00:00:00'
+        print >> f, 'Init', ', Log Prob = ', str(curr_log_prob)
+        print >> f, 'Assignments = ', ' '.join(
+            [str(len(assignments[key])) for key in assignments])
+        print >> f, 'Time Elapsed = 00:00:00'
+
     # iterative model assignment
     iteration = 0
-    prior_assignments = np.empty([])
     delta = eps
+
     while iteration <= max_it:
+        # store prior assignments to short-circuit convergence
+        prior_assignments = assignments.copy()
 
-        prior_models = np.array([models[i].copy() for i in range(models.size)])
-        prior_assignments = np.copy(assignments)
+        # assign to models
+        assignments = assign(models, sequences, assignments, fixed)
 
-        assignments = assign(models, noise_models, sequences,
-                             assignments, fixed)
+        # train on assignments
+        models, assignments = train(models, sequences, assignments, FIT_EPS,
+                                    FIT_ITER)
 
-        train(models, sequences, assignments)
+        # report improvement
+        print assignments
+        detla, curr_log_prob = report(models=models,
+                                      sequences=sequences,
+                                      assignments=assignments,
+                                      iteration=iteration,
+                                      filepath=filepath,
+                                      curr_log_prob=curr_log_prob,
+                                      start_time=start_time)
 
-        new_log_prob = total_log_prob(models, noise_models,
-                                      sequences, assignments)
-        delta = new_log_prob - curr_log_prob
-        curr_log_prob = new_log_prob
-        time_elapsed = time.strftime("%H:%M:%S",
-                                     time.gmtime(time.time() - start_time))
-
-        with open(filepath, 'a') as f:
-            print >> f, 'Iter = ', str(iteration), \
-                  'Delta = ', str(delta), ', Log Prob: ', str(curr_log_prob), \
-                  ', Assignments= ', str(np.bincount(assignments)), \
-                  'time elapsed = ', time_elapsed
-
+        """
         if delta < 0 and eps > 0:
             models = prior_models
             assignments = prior_assignments
             with open(filepath, 'a') as f:
                 print >> f, 'Local optimum found at iter: ', (iteration - 1)
             break
-        elif delta < eps or np.all(prior_assignments != assignments):
+        """
+        if delta < eps or prior_assignments == assignments:
             with open(filepath, 'a') as f:
                 print >> f, 'Local optimum found at iter: ', (iteration)
             break
@@ -74,7 +90,7 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
         iteration += 1
 
     # write conlusive lines in report
-    converged = (delta < eps)
+    converged = (delta < eps) or (prior_assignments == assignments)
     if not converged:
         if (iteration > max_it):
             line = 'Iteration limit reached: ' + str(max_it)
@@ -85,8 +101,8 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
             f.write(str(line))
 
     # write json representations of models
-    for model in models:
-        filepath = odir.split('/') + [model.name]
+    for model_id, model in models.iteritems():
+        filepath = odir.split('/') + [model_id]
         filepath = '/'.join(filepath)
         with open(filepath, 'w') as f:
             f.write(model.to_json())
@@ -95,67 +111,126 @@ def cluster(models, noise_models, sequences, assignments, labels, fixed, eps,
     filepath = odir.split('/') + ['assignments.txt']
     filepath = '/'.join(filepath)
     with open(filepath, 'w') as f:
-        for i, model in enumerate(models):
-            f.write(model.name)
+        for name, model in models.iteritems():
+            f.write(name)
             f.write('\n')
-            f.write('\t'.join(labels[np.where(assignments == i)]))
+            f.write('\t'.join(labels[assignments[name]]))
             # f.write(str(labels[np.where(assignments == i)]))
             f.write('\n')
 
     return models, assignments, converged
 
 
-def train(models, sequences, assignments):
+def assign(models, sequences, assignments, fixed):
+    new_assignments = {}
+    for model_id, model in models.iteritems():
+        new_assignments[model_id] = []
 
-    # train the models based on current assignment
-    for i, model in enumerate(models):
-        # prior_model = models[i].copy()
-        in_model = np.where(assignments == i)[0]
-        if in_model.size != 0:
+    for i, sequence in enumerate(sequences):
+        best_model = ''
+        best_score = -1e1000
+        for model_id, model in models.iteritems():
+            # if fixed, keep it in the same model
+            if fixed[i]:
+                if i in assignments[model_id]:
+                    best_model = model_id
+                    break
+            # otherwise put where it bet fits
+            score = model.log_probability(sequence)
+            if not np.isnan(score):
+                if score > best_score:
+                    best_model = model_id
+                    best_score = score
+        new_assignments[best_model].append(i)
+
+    for model_id, model in models.iteritems():
+        in_model = new_assignments[model_id]
+        for seq_index in in_model:
+            if fixed[seq_index]:
+                continue
+            elif np.isnan(model.log_probability(sequences[seq_index, :])):
+                new_assignments[model_id].remove(seq_index)
+                new_assignments['noise'].append(seq_index)
+
+    return new_assignments
+
+
+def train(models, sequences, assignments, eps, max_iter):
+    new_models = {}
+    for model_id, model in models.iteritems():
+        new_model = models[model_id].copy()
+
+        in_model = assignments[model_id]
+
+        if len(in_model) > 0:
             sequence_set = sequences[in_model, :]
-            model.thaw_distributions()
-            model.fit(sequence_set, verbose=SHOW_TRAINING, algorithm=ALGORITHM,
-                      n_jobs=THREADCOUNT)
-            # if isnan(model.fit(sequence_set)):
-            #    models[i] = prior_model
+
+            # model parameter inertia, inversely proportional to the
+            # proportions of examples to states
+            inertia = 1 - (float(len(in_model)) / model.state_count())
+            inertia = max(0, inertia)
+            inertia = 0
+
+            improvement = new_model.fit(sequence_set.astype(float),
+                                        verbose=SHOW_TRAINING,
+                                        algorithm=ALGORITHM,
+                                        stop_threshold=eps,
+                                        max_iterations=max_iter,
+                                        edge_inertia=inertia,
+                                        distribution_inertia=inertia,
+                                        n_jobs=THREADCOUNT)
+
+            if np.isnan(new_model.summarize(sequence_set)):
+                new_model = model
+
+            """
+            for seq_index in in_model:
+                if np.isnan(new_model.log_probability(sequences[seq_index, :])):
+                    assignments[model_id].remove(seq_index)
+                    assignments['noise'].append(seq_index)
+            """
+        new_models[model_id] = new_model
+
+    return new_models, assignments
 
 
-def assign(models, noise_models, sequences, assignments, fixed):
-    # import pdb; pdb.set_trace()
-    scores = score_matrix(models, noise_models, sequences,
-                          assignments, fixed)
-
-    # reassign to model that minime log probability
-    fixed_assignments = assignments[np.where(fixed)[0]]
-    new_assignemnts = np.argmax(scores, axis=1)
-    new_assignemnts[np.where(fixed)[0]] = fixed_assignments
-    return new_assignemnts
-
-
-def score_matrix(models, noise_models, sequences, assignments, fixed):
-    # calculate log probability of each sequence on each model
-    # import pdb; pdb.set_trace()
-    all_models = np.concatenate((models, noise_models))
-    n_models = len(all_models)
-    n_sequences = assignments.size
-    scores = np.empty((n_sequences, n_models))
-
-    for i in range(n_sequences):
-        for j, model in enumerate(all_models):
-            scores[i, j] = model.log_probability(sequences[i, :])
-
-    return scores
-
-
-def total_log_prob(models, noise_models, sequences, assignments):
-    # calculate log probability of current models + assignments
-    all_models = np.concatenate((models, noise_models))
+def total_log_prob(models, sequences, assignments):
     logsum = 0
-    for i, model in enumerate(all_models):
-        in_model = np.where(assignments == i)[0]
-        logsum += model.summarize(sequences[in_model, :])
+    for model_id, model in models.iteritems():
+        sequence_set = sequences[assignments[model_id], :]
+        print model_id
+        print model.summarize(sequence_set)
+        if sequence_set.size > 0:
+            logsum += model.summarize(sequence_set)
 
     return logsum
+
+
+def log_prob_breakdown(models, sequences, assignments):
+    logsum = []
+    for model_id, model in models.iteritems():
+        sequence_set = sequences[assignments[model_id], :]
+        if sequence_set.size > 0:
+            logsum.append(model.summarize(sequence_set))
+
+    return logsum
+
+
+def report(models, sequences, assignments, iteration,
+           filepath, curr_log_prob, start_time):
+    new_log_prob = total_log_prob(models, sequences, assignments)
+    delta = new_log_prob - curr_log_prob
+    time_elapsed = time.strftime("%H:%M:%S",
+                                 time.gmtime(time.time() - start_time))
+
+    with open(filepath, 'a') as f:
+        print >> f, 'Iter = ', str(iteration)
+        print >> f, 'Delta = ', delta, ', Log Prob: ', new_log_prob
+        print >> f, 'Assignments = ', ' '.join(
+            [str(len(assignments[key])) for key in assignments])
+        print >> f, 'Time Elapsed = ', time_elapsed
+
+    return delta, new_log_prob
 
 
 def df_to_sequence_list(df):
