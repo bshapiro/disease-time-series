@@ -6,14 +6,27 @@ from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
 
 def init():
-    m = 500
+    m = 500  # restricts number of genes, used for local testing, None for all
     gc, mt, track = load_data(m)
+
+    # khmm clustering over a range of k and states-per model
+    k_range = [10, 25, 50, 100, 200]
+    state_range = [5, 10, 25, 50, 100]
 
     msequences, mlabels = df_to_sequence_list(mt.data)
     gsequences, glabels = df_to_sequence_list(gc.data)
 
     sequences = np.concatenate((msequences, gsequences), 0)
     labels = np.concatenate((mlabels, glabels))
+
+    sequences = np.concatenate((sequences, -1 * sequences))
+
+    # tie positive and negative expression sequences
+    tied = {}
+    for i, label in enumerate(labels):
+        tied[label] = [i, i+labels.size]
+
+    labels = np.concatenate(((labels + '+'), (labels + '-')))
 
     # noise model trained on all data once
     # genes/metabolites will be assigned to noise model if other models
@@ -25,19 +38,16 @@ def init():
                                           name='noise')
     noise.freeze_distributions()
 
-    # khmm clustering over a range of k and states-per model
-    k_range = [10, 25, 50, 100, 200]
-    state_range = [5, 10, 25, 50, 100]
-    return sequences, labels, noise, k_range, state_range
+    return sequences, labels, tied, noise, k_range, state_range
 
 
-def rand_init_vit():
-    sequences, labels, noise, k_range, state_range = init()
+def rand_init_invert_vit():
+    sequences, labels, tied, noise, k_range, state_range = init()
     for n in state_range:
         for k in k_range:
             try:
                 # directory to save files to
-                odir_base = '../results/khmm/viterbi/rand_init'
+                odir_base = '../results/khmm/viterbi/rand_init_invert'
                 collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
                 odir = odir_base + '/' + collection_id
 
@@ -45,7 +55,7 @@ def rand_init_vit():
 
                 # generate random initial assignments
                 # initialize models on random assignments
-                randassign = np.random.randint(k, size=labels.size)
+                randassign = np.random.randint(k, size=len(tied.keys()))
                 assignments = {}
                 models = {}
                 for i in range(k):
@@ -60,14 +70,19 @@ def rand_init_vit():
                 models['noise'] = noise
                 assignments['noise'] = []
 
+                # all are un-fixed
+                fixed = {}
+                for model_id, model in models.iteritems():
+                    fixed[model_id] = []
+
                 # perform clustering
                 models, assignments, c = cluster(models=models,
                                                  sequences=sequences,
                                                  assignments=assignments,
+                                                 labels=labels,
                                                  algorithm='viterbi',
-                                                 labels=labels,
+                                                 fixed=fixed, tied=tied,
                                                  odir=odir)
-
             except:
                 error_file = odir.split('/') + ['errors.txt']
                 error_file = '/'.join(error_file)
@@ -77,13 +92,13 @@ def rand_init_vit():
                 f.close()
 
 
-def rand_init():
-    sequences, labels, noise, k_range, state_range = init()
+def rand_init_invert():
+    sequences, labels, tied, noise, k_range, state_range = init()
     for n in state_range:
         for k in k_range:
             try:
                 # directory to save files to
-                odir_base = '../results/khmm/rand_init'
+                odir_base = '../results/khmm/rand_init_invert'
                 collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
                 odir = odir_base + '/' + collection_id
 
@@ -91,7 +106,7 @@ def rand_init():
 
                 # generate random initial assignments
                 # initialize models on random assignments
-                randassign = np.random.randint(k, size=labels.size)
+                randassign = np.random.randint(k, size=len(tied.keys()))
                 assignments = {}
                 models = {}
                 for i in range(k):
@@ -106,12 +121,18 @@ def rand_init():
                 models['noise'] = noise
                 assignments['noise'] = []
 
+                # all are un-fixed
+                fixed = {}
+                for model_id, model in models.iteritems():
+                    fixed[model_id] = []
+
                 # perform clustering
                 models, assignments, c = cluster(models=models,
                                                  sequences=sequences,
                                                  assignments=assignments,
-                                                 algorithm='baum-welch',
                                                  labels=labels,
+                                                 algorithm='baum-welch',
+                                                 fixed=fixed, tied=tied,
                                                  odir=odir)
             except:
                 error_file = odir.split('/') + ['errors.txt']
@@ -120,12 +141,3 @@ def rand_init():
                 print >> f, 'error computing parameters for: ', collection_id
                 print >> f, "Unexpected error:", sys.exc_info()[0]
                 f.close()
-
-
-if __name__ == "__main__":
-    alg = sys.argv[1]
-    print alg
-    if alg == 'viterbi':
-        rand_init_vit()
-    if alg == 'baum-welch':
-        rand_init()
