@@ -4,7 +4,7 @@ import time
 import numpy as np
 import os
 
-THREADCOUNT = 1
+THREADCOUNT = 12
 SHOW_TRAINING = True
 ALGORITHM = 'baum-welch'
 FIT_EPS = 1e-3  # Convergence threshold of fit
