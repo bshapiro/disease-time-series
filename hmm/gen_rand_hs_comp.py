@@ -7,7 +7,6 @@ from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
 
 def init(m=None, seed=None):
-    m = None
     gc, mt, track = load_data(m, seed)
 
     msequences, mlabels = df_to_sequence_list(mt.data)
