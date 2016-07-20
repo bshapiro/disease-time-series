@@ -31,20 +31,20 @@ def init(m=None, seed=None):
     return sequences, labels, noise, k_range, state_range
 
 
-def gen(m, x):
+def gen(m, x, k, n):
     """
     generate x sets of models on m genes
     gene_seed is the random seed for gene selection
     assign_seed is the seed for random assignment generation
     model_seed is the random seed for model initialization
     x is a batch identifier, any output with x was generated from identicle
+    k clusters
+    n states per cluster
     random initializations
     """
 
     # random subset of sequences shared for baum-welch and viterbi training
     sequences, labels, noise, k_range, state_range = init(m, int(time.time()))
-    k = 20
-    n = 10
 
     # generate random initial assignments
     np.random.seed(int(time.time()) + 11)
@@ -104,5 +104,7 @@ def gen(m, x):
 if __name__ == "__main__":
     m = int(sys.argv[1])
     x = int(sys.argv[2])
+    k = int(sys.argv[3])
+    n = int(sys.argv[4])
     for i in range(x):
-        gen(m, x)
+        gen(m, x, k, n)
