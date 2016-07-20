@@ -15,7 +15,12 @@ rin = pickle.load(open(fd[0]))
 goodrin = rin[np.where(rin > th[0])[0]].reshape(-1, 1)
 
 
-def load_data(m=None):
+def load_data(m=None, seed=None):
+
+    # seed random number generation
+    if seed is not None:
+        np.random.seed(seed)
+
     data, rl, cl = load_file(mc_data, 'tsv', True, True)
     gc = Preprocessing(data, rl, cl, transpose=True)
     gc.filter((rin, '>', 6, 0))
@@ -25,7 +30,6 @@ def load_data(m=None):
     gc.transpose()
     gc.scale(1)
     if m is not None:
-        np.random.seed(0)
         indices = np.arange(gc.data.index.size)
         indices = np.random.permutation(indices)
         indices = indices[:m]
@@ -75,6 +79,6 @@ def load_data(m=None):
     mt = Preprocessing(metab.as_matrix(), kegg_ids, metab.columns.values,
                        transpose=False)
     mt.log_transform(0)
-    mt.scale()
+    mt.scale(1)
 
     return gc, mt, track

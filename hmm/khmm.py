@@ -4,8 +4,8 @@ import time
 import numpy as np
 import os
 
-THREADCOUNT = 12
-SHOW_TRAINING = True
+THREADCOUNT = 2
+SHOW_TRAINING = False
 ALGORITHM = 'baum-welch'
 FIT_EPS = 1e-3  # Convergence threshold of fit
 FIT_ITER = 1e3  # Max iter of fit function
@@ -94,7 +94,7 @@ def cluster(models, sequences, assignments, labels, state_labels=None,
                                     FIT_EPS, FIT_ITER)
 
         # report improvement
-        detla, curr_log_prob = report(models=models,
+        delta, curr_log_prob = report(models=models,
                                       sequences=sequences,
                                       assignments=assignments,
                                       iteration=iteration,
@@ -102,7 +102,7 @@ def cluster(models, sequences, assignments, labels, state_labels=None,
                                       curr_log_prob=curr_log_prob,
                                       start_time=start_time)
 
-        print 'Iteration: ', iteration, ', Delta = ', detla, \
+        print 'Iteration: ', iteration, ', Delta = ', delta, \
               ', Log Prob = ', curr_log_prob
 
         if (delta < 0) or (delta < eps):
@@ -130,13 +130,6 @@ def cluster(models, sequences, assignments, labels, state_labels=None,
         with open(filepath, 'a') as f:
             f.write(str(line))
 
-    # write json representations of models
-    for model_id, model in models.iteritems():
-        filepath = odir.split('/') + [model_id]
-        filepath = '/'.join(filepath)
-        with open(filepath, 'w') as f:
-            f.write(model.to_json())
-
     # write cluster assignments
     filepath = odir.split('/') + ['assignments.txt']
     filepath = '/'.join(filepath)
@@ -152,6 +145,13 @@ def cluster(models, sequences, assignments, labels, state_labels=None,
                 f.write('\n')
             # f.write(str(labels[np.where(assignments == i)]))
             f.write('\n')
+
+    # write json representations of models
+    for model_id, model in models.iteritems():
+        filepath = odir.split('/') + [model_id]
+        filepath = '/'.join(filepath)
+        with open(filepath, 'w') as f:
+            f.write(model.to_json())
 
     return models, assignments, converged
 
@@ -288,7 +288,7 @@ def df_to_sequence_list(df):
     return sequences, labels
 
 
-def init_gaussian_hmm(sequences, n_states, model_id):
+def init_gaussian_hmm(sequences, n_states, model_id, seed=None):
     """
     insantiate a model with random parameters
     randomly generates start and transition matrices
@@ -318,6 +318,10 @@ def init_gaussian_hmm(sequences, n_states, model_id):
 
     model = HiddenMarkovModel.from_matrix(trans, dists, starts, name=model_id)
     """
+    # seed random numer generator
+    if seed is not None:
+        np.random.seed(seed)
+
     model = HiddenMarkovModel(model_id)
 
     # make states with distrobutions from random subsets of timepoints
@@ -349,12 +353,18 @@ def init_gaussian_hmm(sequences, n_states, model_id):
 
 
 def init_lr_hmm(sequences, steps, states_per_step,
-                hard_end, model_id):
+                force_end=False, model_id='Left-Righ HMM', seed=None):
     """
     insantiate a left-right model with random parameters
     randomly generates start and transition matrices
     generates nomal distrobutions for each state from partition on sequences
+    force_end if we require sequence to end in end state
     """
+
+    # seed random number generator
+    if seed is not None:
+        np.random.seed(seed)
+
     model = HiddenMarkovModel(model_id)
     n_states = steps * states_per_step
 
@@ -393,7 +403,7 @@ def init_lr_hmm(sequences, steps, states_per_step,
                                      trans[x + 1])
 
     # make random transition from stepn -> end
-    if hard_end:
+    if force_end:
         for j in range(states_per_step):
             trans = np.random.ranf(2)
             trans = trans / trans.sum()
