@@ -1,4 +1,5 @@
 import numpy as np
+import string
 
 
 def load_kegg_pathways(gc, mt, z):
@@ -8,8 +9,13 @@ def load_kegg_pathways(gc, mt, z):
 
     gene_pathway_members = []
     gene_pathway_names = []
+    exclude = set(string.punctuation)
     for i in range(len(kegg_genesets)):
-        gene_pathway_names.append(kegg_genesets[i].split('\t')[0])
+        name = kegg_genesets[i].split('\t')[0]
+        name = (''.join(ch for ch in name if ch not in exclude))
+        name = name.replace(' ', '_')
+
+        gene_pathway_names.append(name)
         pathway_genes = kegg_genesets[i].split('\t')[2:]
         p_genes = []
         for gene in pathway_genes:
@@ -20,7 +26,11 @@ def load_kegg_pathways(gc, mt, z):
     metab_pathway_members = []
     metab_pathway_names = []
     for i in range(len(kegg_metabsets)):
-        metab_pathway_names.append(kegg_metabsets[i].split('\t')[0])
+        name = kegg_metabsets[i].split('\t')[0]
+        name = (''.join(ch for ch in name if ch not in exclude))
+        name = name.replace(' ', '_')
+
+        metab_pathway_names.append(name)
         pathway_metabs = kegg_metabsets[i].split('\t')[2:]
         p_metabs = []
         for metab in pathway_metabs:
