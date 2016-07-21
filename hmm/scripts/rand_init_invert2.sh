@@ -4,6 +4,6 @@
 # state_range = [int(i) for i in sys.argv[4:]]
 # k_range = [25, 50, 75, 100, 125]
 # state_range = [10, 20, 40, 60]
-
+cd /home/ktayeb1/disease-time-series/hmm
 python random_init_invert.py viterbi 6000 50 10 20 40 60
 python random_init_invert.py viterbi 6000 100 10 20 40 60
