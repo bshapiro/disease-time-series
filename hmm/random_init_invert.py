@@ -10,10 +10,6 @@ def init(m, seed):
         m = None
     gc, mt, track = load_data(m, seed)
 
-    # khmm clustering over a range of k and states-per model
-    k_range = [10, 25, 50, 100, 200]
-    state_range = [5, 10, 25, 50, 100]
-
     msequences, mlabels = df_to_sequence_list(mt.data)
     gsequences, glabels = df_to_sequence_list(gc.data)
 
@@ -39,11 +35,11 @@ def init(m, seed):
                                           name='noise')
     noise.freeze_distributions()
 
-    return sequences, labels, tied, noise, k_range, state_range
+    return sequences, labels, tied, noise
 
 
 def rand_init_invert(algorithm, m, k, state_range):
-    sequences, labels, tied, noise, k_range, state_range = init(m, 0)
+    sequences, labels, tied, noise = init(m, 0)
     for n in state_range:
         try:
             # directory to save files to

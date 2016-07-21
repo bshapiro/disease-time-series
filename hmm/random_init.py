@@ -26,14 +26,11 @@ def init(m, seed):
                                           name='noise')
     noise.freeze_distributions()
 
-    # khmm clustering over a range of k and states-per model
-    k_range = [25, 50, 75, 100, 125]
-    state_range = [10, 20, 40, 60]
-    return sequences, labels, noise, k_range, state_range
+    return sequences, labels, noise
 
 
 def rand_init(algorithm, m, k, state_range):
-    sequences, labels, noise, k_range, state_range = init(m, 0)
+    sequences, labels, noise = init(m, 0)
     for n in state_range:
         try:
             # directory to save files to
