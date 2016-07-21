@@ -1,12 +1,11 @@
 import numpy as np
 import pickle
-from config import config, param
 from optparse import OptionParser
 from sklearn.preprocessing import scale
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from numpy.linalg import svd as svd_func
 # from tools.helpers import *
-from representation import Representation
 
 parser = OptionParser()
 # input options
@@ -110,7 +109,7 @@ class Preprocessing:
         # filter_data=None, operators=None, thresholds=None,
         # clean_components=None, regress_out=None,
 
-    def filter(self, f, include_nan=config['filter_include_nan']):
+    def filter(self, f, include_nan=True):
         """
         f contains all the information necessary for filtering
         - f[0] is the data to filter on
@@ -194,7 +193,7 @@ class Preprocessing:
         returns matrix of cleaned data
         """
         if components is None:
-            components = param['clean_components']
+            components = np.array([])
         if type(components) is int:
             components = np.arange(components)
 
@@ -202,7 +201,7 @@ class Preprocessing:
         data = self.data.as_matrix()
         if scale_in:
             data = scale(data)
-        U, S, V = Representation(data).svd()
+        U, S, V = svd_func(data, full_matrices=False)
         loadings = U[:, components]
 
         new_data = np.copy(data)
