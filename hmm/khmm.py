@@ -1,4 +1,5 @@
 from pomegranate import NormalDistribution, HiddenMarkovModel, State
+from scipy.spatial import distance
 import math
 import time
 import numpy as np
@@ -473,3 +474,84 @@ def init_cycle_hmm(sequences, steps, states_per_step, model_id):
                                  trans[x + 1])
     model.bake()
     return model
+
+
+def inter_distance(id1, id2, models, sample_length, num_samples):
+    """
+    A distance metric for evaluating degree of seperation between two clusters
+    """
+    # for now sample from each cluster a bunch of times and take the distance
+    # between the average emissions
+    model1 = models[id1]
+    model2 = models[id2]
+    m1_sample = np.empty((num_samples, sample_length))
+    m2_sample = np.empty((num_samples, sample_length))
+    for i in range(num_samples):
+        m1_sample[i, :] = model1.sample(sample_length)
+        m2_sample[i, :] = model2.sample(sample_length)
+
+    m1_mean = m1_sample.mean(0)
+    m2_mean = m2_sample.mean(0)
+    return distance.euclidean(m1_mean, m2_mean)
+
+
+def intra_distance(model_id, members, distance_func, models, data, stat):
+    model = models[model_id]
+    sequences = data.loc[members, :].as_matrix()
+    distances = []
+    for sequence in sequences:
+        distances.append(distance_func(model, sequence))
+    distances = np.array(distances)
+
+    distance = None
+    if stat == 'mean':
+        distance = np.mean(distances)
+    if stat == 'median':
+        distance == np.median(distances)
+    if stat == 'min':
+        distance == np.min(distances)
+    if stat == 'max':
+        distance == np.max(distances)
+
+    return distance
+
+
+def viterbi_distance(model, sequence):
+    """
+    Calculates the distance betwwen a sequence vectors and
+    a vector of the distrobution means on the viterbi path
+    note: this only works for normal distrobutions at the moment
+    """
+
+    v_path = model.viterbi(sequence)[1]
+    v = []
+    for state in v_path:
+        if state[0] == model.start_index or state[0] == model.end_index:
+            continue
+        v.append(state[1].distribution.parameters[0])
+    s = np.array(sequence)
+    v = np.array(v)
+
+    return distance.euclidean(s, v)
+
+
+def weighted_distance(model, sequence):
+    """
+    Calculates the distance betwwen a sequence vectors and
+    vectors of the distrobution means weighted by the probability
+    of each distrobution producing the observed emission in the sequence
+    note: this only works for normal distrobutions at the moment
+    """
+    path_prob = model.predict_proba(sequence)
+    d = []
+    for i, emission in enumerate(sequence):
+        emission_distance = 0
+        for j in range(path_prob.shape[1]):
+            emission_distance = \
+                abs(emission - model.states[j].distribution.parameters[0]) * \
+                path_prob[i, j]
+        d.append(emission_distance)
+
+    d = np.array(d)
+    o = np.zeros(d.size)
+    return distance.euclidean(o, d)
