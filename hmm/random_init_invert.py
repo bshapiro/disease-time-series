@@ -5,9 +5,10 @@ from pomegranate import NormalDistribution, HiddenMarkovModel
 from khmm import df_to_sequence_list, cluster, init_gaussian_hmm
 
 
-def init():
-    m = 500  # restricts number of genes, used for local testing, None for all
-    gc, mt, track = load_data(m)
+def init(m, seed):
+    if m == -1:
+        m = None
+    gc, mt, track = load_data(m, seed)
 
     # khmm clustering over a range of k and states-per model
     k_range = [10, 25, 50, 100, 200]
@@ -41,103 +42,65 @@ def init():
     return sequences, labels, tied, noise, k_range, state_range
 
 
-def rand_init_invert_vit():
-    sequences, labels, tied, noise, k_range, state_range = init()
+def rand_init_invert(algorithm, m, k, state_range):
+    sequences, labels, tied, noise, k_range, state_range = init(m, 0)
     for n in state_range:
-        for k in k_range:
-            try:
-                # directory to save files to
-                odir_base = '../results/khmm/viterbi/rand_init_invert'
-                collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
-                odir = odir_base + '/' + collection_id
+        try:
+            # directory to save files to
+            odir_base = '../results/khmm/' + algorithm + '/' + str(m) + \
+                        '/rand_init_invert'
+            collection_id = 'm' + str(m) + 'k' + str(k) + 'n' + str(n) + \
+                            '_rand_init_invert'
+            odir = odir_base + '/' + collection_id
 
-                print 'Learning: ', collection_id
+            print 'Learning: ', collection_id
 
-                # generate random initial assignments
-                # initialize models on random assignments
-                randassign = np.random.randint(k, size=len(tied.keys()))
-                assignments = {}
-                models = {}
-                for i in range(k):
-                    model_id = str(i)
-                    assignments[model_id] = \
-                        np.where(randassign == i)[0].tolist()
-                    in_model = assignments[model_id]
-                    models[model_id] = \
-                        init_gaussian_hmm(sequences[in_model, :], n, model_id)
+            # generate random initial assignments
+            # initialize models on random assignments
+            randassign = np.random.randint(k, size=len(tied.keys()))
+            assignments = {}
+            models = {}
+            for i in range(k):
+                model_id = str(i)
+                assignments[model_id] = \
+                    np.where(randassign == i)[0].tolist()
+                in_model = assignments[model_id]
+                models[model_id] = \
+                    init_gaussian_hmm(sequences[in_model, :], n, model_id)
 
-                # add noise model
-                models['noise'] = noise
-                assignments['noise'] = []
+            # add noise model
+            models['noise'] = noise
+            assignments['noise'] = []
 
-                # all are un-fixed
-                fixed = {}
-                for model_id, model in models.iteritems():
-                    fixed[model_id] = []
+            # all are un-fixed
+            fixed = {}
+            for model_id, model in models.iteritems():
+                fixed[model_id] = []
 
-                # perform clustering
-                models, assignments, c = cluster(models=models,
-                                                 sequences=sequences,
-                                                 assignments=assignments,
-                                                 labels=labels,
-                                                 algorithm='viterbi',
-                                                 fixed=fixed, tied=tied,
-                                                 odir=odir)
-            except:
-                error_file = odir.split('/') + ['errors.txt']
-                error_file = '/'.join(error_file)
-                f = open(error_file, 'a')
-                print >> f, 'error computing parameters for: ', collection_id
-                print >> f, "Unexpected error:", sys.exc_info()[0]
-                f.close()
+            # perform clustering
+            models, assignments, c = cluster(models=models,
+                                             sequences=sequences,
+                                             assignments=assignments,
+                                             labels=labels,
+                                             algorithm=algorithm,
+                                             fixed=fixed, tied=tied,
+                                             odir=odir)
+        except:
+            error_file = odir.split('/') + ['errors.txt']
+            error_file = '/'.join(error_file)
+            f = open(error_file, 'a')
+            print >> f, 'error computing parameters for: ', collection_id
+            print >> f, "Unexpected error:", sys.exc_info()[0]
+            f.close()
 
 
-def rand_init_invert():
-    sequences, labels, tied, noise, k_range, state_range = init()
-    for n in state_range:
-        for k in k_range:
-            try:
-                # directory to save files to
-                odir_base = '../results/khmm/rand_init_invert'
-                collection_id = 'k-' + str(k) + '_n-' + str(n) + '_rand_init'
-                odir = odir_base + '/' + collection_id
-
-                print 'Learning: ', collection_id
-
-                # generate random initial assignments
-                # initialize models on random assignments
-                randassign = np.random.randint(k, size=len(tied.keys()))
-                assignments = {}
-                models = {}
-                for i in range(k):
-                    model_id = str(i)
-                    assignments[model_id] = \
-                        np.where(randassign == i)[0].tolist()
-                    in_model = assignments[model_id]
-                    models[model_id] = \
-                        init_gaussian_hmm(sequences[in_model, :], n, model_id)
-
-                # add noise model
-                models['noise'] = noise
-                assignments['noise'] = []
-
-                # all are un-fixed
-                fixed = {}
-                for model_id, model in models.iteritems():
-                    fixed[model_id] = []
-
-                # perform clustering
-                models, assignments, c = cluster(models=models,
-                                                 sequences=sequences,
-                                                 assignments=assignments,
-                                                 labels=labels,
-                                                 algorithm='baum-welch',
-                                                 fixed=fixed, tied=tied,
-                                                 odir=odir)
-            except:
-                error_file = odir.split('/') + ['errors.txt']
-                error_file = '/'.join(error_file)
-                f = open(error_file, 'a')
-                print >> f, 'error computing parameters for: ', collection_id
-                print >> f, "Unexpected error:", sys.exc_info()[0]
-                f.close()
+if __name__ == "__main__":
+    alg = sys.argv[1]
+    m = int(sys.argv[2])
+    k = int(sys.argv[3])
+    state_range = [int(i) for i in sys.argv[4:]]
+    print alg
+    print m
+    print k
+    print state_range
+    rand_init_invert(alg, m, k, state_range)
