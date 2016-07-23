@@ -244,8 +244,6 @@ def total_log_prob(models, sequences, assignments):
     logsum = 0
     for model_id, model in models.iteritems():
         sequence_set = sequences[assignments[model_id], :]
-        print model_id
-        print model.summarize(sequence_set)
         if sequence_set.size > 0:
             logsum += model.summarize(sequence_set)
 
@@ -350,6 +348,7 @@ def init_gaussian_hmm(sequences, n_states, model_id, seed=None):
             model.add_transition(state1, state2, transitions[i])
 
     model.bake()
+    print 'Initialized HMM: ', model.name
     return model
 
 
@@ -415,6 +414,8 @@ def init_lr_hmm(sequences, steps, states_per_step,
             model.add_transition(states[(steps - 1), j], model.end, trans[1])
 
     model.bake()
+    print 'Initialized Left-Right HMM:', model.name, '[', \
+        steps, states_per_step, ']'
     return model
 
 
@@ -473,12 +474,15 @@ def init_cycle_hmm(sequences, steps, states_per_step, model_id):
             model.add_transition(states[(steps - 1), j], states[0, x],
                                  trans[x + 1])
     model.bake()
+    print 'Initialized Cyclic State HMM:', '[', \
+        steps, states_per_step, ']'
     return model
 
 
-def inter_distance(id1, id2, models, sample_length, num_samples):
+def sampled_inter_distance(id1, id2, models, sample_length, num_samples):
     """
     A distance metric for evaluating degree of seperation between two clusters
+    take the average sample from each model and take distance
     """
     # for now sample from each cluster a bunch of times and take the distance
     # between the average emissions
@@ -495,12 +499,40 @@ def inter_distance(id1, id2, models, sample_length, num_samples):
     return distance.euclidean(m1_mean, m2_mean)
 
 
+def averaged_inter_distance(id1, id2, models, clusters, distance_func,
+                            distance_args):
+    """
+    A distance metric for evaluating degree of seperation between two clusters
+    take the average distance of samples in one cluster from another and from
+    other cluster to first. take weighted average of these distance based on
+    cluster membership count
+    """
+    # for now sample from each cluster a bunch of times and take the distance
+    # between the average emissions
+    members1 = clusters[id1]
+    members2 = clusters[id2]
+    l1 = len(members1)
+    l2 = len(members2)
+
+    dist21 = distance_func(id1, members2, **distance_args)
+    dist12 = distance_func(id2, members1, **distance_args)
+
+    distance = ((l1 * dist12) + (l2 * dist21)) / (l1 + l2)
+    return distance
+
+
 def intra_distance(model_id, members, distance_func, models, data, stat):
     model = models[model_id]
     sequences = data.loc[members, :].as_matrix()
     distances = []
     for sequence in sequences:
-        distances.append(distance_func(model, sequence))
+        try:
+            distances.append(distance_func(model, sequence))
+        except:
+            print 'Random assignment resulted in impossible sequence,', \
+                  ' ignoring in distance calculation'
+            continue
+
     distances = np.array(distances)
 
     distance = None
