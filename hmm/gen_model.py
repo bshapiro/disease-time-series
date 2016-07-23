@@ -55,6 +55,19 @@ def gen_model(sequences, labels, algorithm, initialization, restarts, n, k,
     noise.freeze_distributions()
 
     np.random.seed(int(time.time()))
+    randassigns = []
+    for x in range(restarts):
+        randassigns.append(np.random.randint(k, size=labels.size))
+
+    for x in range(restarts):
+        randassign = randassigns[x]
+        assignments = {}
+        for i in range(k):
+            model_id = str(i)
+            assignments[model_id] = \
+                np.where(randassign == i)[0].tolist()
+            in_model = assignments[model_id]
+        print assignments
     # gen model for number of restarts
     for x in range(restarts):
         try:
@@ -65,7 +78,7 @@ def gen_model(sequences, labels, algorithm, initialization, restarts, n, k,
 
             # generate random initial assignments
             # initialize models on random assignments
-            randassign = np.random.randint(k, size=labels.size)
+            randassign = randassigns[x]
             assignments = {}
             models = {}
             for i in range(k):
@@ -114,7 +127,8 @@ if __name__ == "__main__":
     # input options
     parsr.add_option('-g', "--genefile", dest="genefile", default='3k_genes.p',
                      help="pickle of np array of gene subset")
-    parsr.add_option('-a', "--algorithm", dest="algorithm", default='baum-welch',
+    parsr.add_option('-a', "--algorithm", dest="algorithm",
+                     default='baum-welch',
                      help="'viterbi' or 'baum-welch'")
     parsr.add_option('-r', "--restarts", dest="restarts", type=int, default=1,
                      help="number of times to create model")
