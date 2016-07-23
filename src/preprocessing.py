@@ -7,76 +7,6 @@ from sklearn.linear_model import LinearRegression
 from numpy.linalg import svd as svd_func
 # from tools.helpers import *
 
-parser = OptionParser()
-# input options
-parser.add_option("--in_directory", dest="in_dir", default="",
-                  help="Directory to look for files, default curr directory")
-parser.add_option("-d", "--dataset", dest="dataset", default=None,
-                  help="Dataset, the file the the data matrix in it")
-parser.add_option("--filetype", dest="filetype", default='pickle',
-                  help="File type of data file ('csv', 'tsv', 'pickle')")
-
-parser.add_option("--has_row_labels", action="store_true",
-                  dest="has_row_labels", default=False,
-                  help="If True, first column of dataset file are labels")
-parser.add_option("--has_col_labels", action="store_true",
-                  dest="has_col_labels", default=False,
-                  help="If True, first column of dataset file are labels")
-
-# transpose option
-parser.add_option("--transpose_data",  action="store_true",
-                  dest="transpose", default=False,
-                  help="If True, tranpose the data matrix")
-
-# log-transform options
-parser.add_option("-l", "--log_transform", action="store_true",
-                  dest="log_transform", default=False,
-                  help="If true performs log2 transform on data")
-parser.add_option("--smoothing", default=1, dest="smoothing",
-                  help="Smoothing value for log trasform")
-
-# scaling options
-parser.add_option("-s", "--scale_data", action="store_true",
-                  dest="scale_data", default=False,
-                  help="If true scales data (default to mean 0 variance 1)")
-parser.add_option("--scale_axis", dest="scale_axis", default=0,
-                  help="Axis to scale one")
-parser.add_option("--center_off", action="store_false",
-                  dest="center_off", default=True,
-                  help="If enabled scale won't attempt to center data")
-parser.add_option("--unit_std_off", action="store_false",
-                  dest="unit_std_off", default=True,
-                  help="If enabled scale won't scale to unit-normal")
-
-# filtering options
-parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
-                  help="List of data to filter on")
-parser.add_option("-o", "--operators", dest="operators", default=None,
-                  help="List of operators for filtering")
-parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
-                  help="List of thresholds for operators")
-parser.add_option("-a", "--filter_axes", dest="filter_axes", default=None,
-                  help="List of axes for each filter operation")
-
-# cleaning options
-parser.add_option("-p", "--principal_components", dest="principal_components",
-                  default=[], help="List of PCs to regress out")
-parser.add_option("--regress_cols", dest="regress_cols", default=None,
-                  help="Regress data on columns of matrix")
-parser.add_option("--regress_rows", dest="regress_rows", default=None,
-                  help="Regress data on rows of matrix")
-
-# output options
-parser.add_option("--odir", dest="out_directory", default='',
-                  help="Output directory+prefix to prepend to any saved output"
-                  )
-parser.add_option("--saveas", dest="saveas", default='pickle',
-                  help=("How to save data:" +
-                        "\'pickle\', \'mat\', \'R\', \'txt\'")
-                  )
-
-(options, args) = parser.parse_args()
-
 
 class Preprocessing:
 
@@ -330,6 +260,76 @@ if __name__ == "__main__":
     5. data cleaning on pcs and values specified in regress_rows/regress_cols
     6. save output
     """
+
+    parser = OptionParser()
+    # input options
+    parser.add_option("--in_directory", dest="in_dir", default="",
+                      help="Directory to look for files, default curr directory")
+    parser.add_option("-d", "--dataset", dest="dataset", default=None,
+                      help="Dataset, the file the the data matrix in it")
+    parser.add_option("--filetype", dest="filetype", default='pickle',
+                      help="File type of data file ('csv', 'tsv', 'pickle')")
+
+    parser.add_option("--has_row_labels", action="store_true",
+                      dest="has_row_labels", default=False,
+                      help="If True, first column of dataset file are labels")
+    parser.add_option("--has_col_labels", action="store_true",
+                      dest="has_col_labels", default=False,
+                      help="If True, first column of dataset file are labels")
+
+    # transpose option
+    parser.add_option("--transpose_data",  action="store_true",
+                      dest="transpose", default=False,
+                      help="If True, tranpose the data matrix")
+
+    # log-transform options
+    parser.add_option("-l", "--log_transform", action="store_true",
+                      dest="log_transform", default=False,
+                      help="If true performs log2 transform on data")
+    parser.add_option("--smoothing", default=1, dest="smoothing",
+                      help="Smoothing value for log trasform")
+
+    # scaling options
+    parser.add_option("-s", "--scale_data", action="store_true",
+                      dest="scale_data", default=False,
+                      help="If true scales data (default to mean 0 variance 1)")
+    parser.add_option("--scale_axis", dest="scale_axis", default=0,
+                      help="Axis to scale one")
+    parser.add_option("--center_off", action="store_false",
+                      dest="center_off", default=True,
+                      help="If enabled scale won't attempt to center data")
+    parser.add_option("--unit_std_off", action="store_false",
+                      dest="unit_std_off", default=True,
+                      help="If enabled scale won't scale to unit-normal")
+
+    # filtering options
+    parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
+                      help="List of data to filter on")
+    parser.add_option("-o", "--operators", dest="operators", default=None,
+                      help="List of operators for filtering")
+    parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
+                      help="List of thresholds for operators")
+    parser.add_option("-a", "--filter_axes", dest="filter_axes", default=None,
+                      help="List of axes for each filter operation")
+
+    # cleaning options
+    parser.add_option("-p", "--principal_components", dest="principal_components",
+                      default=[], help="List of PCs to regress out")
+    parser.add_option("--regress_cols", dest="regress_cols", default=None,
+                      help="Regress data on columns of matrix")
+    parser.add_option("--regress_rows", dest="regress_rows", default=None,
+                      help="Regress data on rows of matrix")
+
+    # output options
+    parser.add_option("--odir", dest="out_directory", default='',
+                      help="Output directory+prefix to prepend to any saved output"
+                      )
+    parser.add_option("--saveas", dest="saveas", default='pickle',
+                      help=("How to save data:" +
+                            "\'pickle\', \'mat\', \'R\', \'txt\'")
+                      )
+
+    (options, args) = parser.parse_args()
 
     datapath = options.in_dir + options.dataset
 
