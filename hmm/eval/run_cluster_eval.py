@@ -95,15 +95,15 @@ def dunn_davies_plots(cluster_directory_root, clusterings, clusterings_models,
         # run dunn and davies_bouldin for clusterings and random permutations
         logprob = report_total_logprob(clusterings, clusterings_models,
                                          data)
-        savename = cluster_directory_root + 'log_probs'
+        savename = cluster_directory_root + prefix + '_log_probs'
         dump(logprob, open(savename, 'w'))
 
         dunn = report_dunn(clusterings, clusterings_models, data)
-        savename = cluster_directory_root + 'dunn_index'
+        savename = cluster_directory_root + prefix + '_dunn_index'
         dump(dunn, open(savename, 'w'))
 
         davies = report_davies_bouldin(clusterings, clusterings_models, data)
-        savename = cluster_directory_root + 'davies_bouldin_index'
+        savename = cluster_directory_root + prefix + '_davies_bouldin_index'
         dump(davies, open(savename, 'w'))
 
         if plottype == 'none':
