@@ -1,3 +1,5 @@
+cd /home/ktayeb1/disease-time-series/hmm
+
 python eval/stability_eval.py ../results/final/final_rand/ 1 null row
 python eval/stability_eval.py ../results/final/final_rand/ 1 null row
 python eval/stability_eval.py ../results/final/final_rand/ 1 null row
