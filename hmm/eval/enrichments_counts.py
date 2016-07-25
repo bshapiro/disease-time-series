@@ -1,7 +1,9 @@
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import sys
+import seaborn as sns
 
 """
 point to a directory with subfolders where each subfolder is a clustering
@@ -56,30 +58,23 @@ def run(cluster_directory_root):
             genrichments_per_cluster.append(genriched_count)
             menriched_clusters.append(menriched)
             menrichments_per_cluster.append(menriched_count)
-            clustering_ids.append(clustering_id.split('_')[1])
+            # clustering_ids.append(clustering_id.split('_')[1])
+            clustering_ids.append(clustering_id)
         except:
             pass
-    fig, ax = plt.subplots()
-    ind = np.arange(len(genriched_clusters))
-    width = 0.15
-    r1 = ax.bar(ind, genriched_clusters, width, color='g', align='center')
-    r2 = ax.bar(ind + width, genrichments_per_cluster, width, color='b', align='center')
-    r3 = ax.bar(ind + (width * 2), menriched_clusters, width, color='r', align='center')
-    r4 = ax.bar(ind + (width * 3), menrichments_per_cluster, width, color='y', align='center')
 
-    ax.legend((r1[0], r2[0], r3[0], r4[0]), ('Gene Enriched Clusters', 'Gene Enrichment Count', 'Metab Enriched Clusters', 'Metab Enrichment Count'))
-
-    ax.set_title('Enrichment Count by Clustering')
-    ax.set_xticks
-    ax.set_xticks(ind)
-    ax.set_xticklabels(clustering_ids, rotation='vertical')
-    plt.tight_layout()
-
+    df = pd.DataFrame([pd.Series(index=clustering_ids, data=genriched_clusters, name='Gene Enriched Clusters'),
+                       pd.Series(index=clustering_ids, data=genrichments_per_cluster, name='Gene Enriched Pathways'),
+                       pd.Series(index=clustering_ids, data=menriched_clusters, name='Metabolite Enirched Clusters'),
+                       pd.Series(index=clustering_ids, data=menrichments_per_cluster, name='Metabolite Enirched Pathways')
+                       ])
+    df.T.plot.bar()
+    plt.title('Enrichment Counts by Clustering')
     savename = '/'.join(cluster_directory_root.split('/') +
                         ['enrichment_counts'])
     plt.savefig(savename)
     plt.close()
-
+    print 'Saved plot to: ', savename
 
 if __name__ == "__main__":
     directory = sys.argv[1]
