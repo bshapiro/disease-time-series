@@ -18,32 +18,32 @@ def run(cluster_directory_root, pathways):
     """
 
     kegg_gene_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/KEGG_genes'
+        '../src/gsea/KEGG_genes'
 
     kegg_metab_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/' + \
+        '../src/gsea/' + \
         'KEGG_metabolites'
 
     reactome_gene_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/REACTOME_genes'
+        '../src/gsea/REACTOME_genes'
 
     reactome_metab_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/' + \
+        '../src/gsea/' + \
         'REACTOME_metabolites'
 
     all_gene_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/CPDB_genes'
+        '../src/gsea/CPDB_genes'
 
     all_metab_file = \
-        '/home/karl/Code/Research/disease-time-series/src/gsea/' + \
+        '../src/gsea/' + \
         'CPDB_metabolites'
 
     if pathways == 'kegg':
         gene_file = kegg_gene_file
         metab_file = kegg_metab_file
     if pathways == 'reactome':
-        gene_file = kegg_gene_file
-        metab_file = kegg_metab_file
+        gene_file = reactome_gene_file
+        metab_file = reactome_metab_file
     if pathways == 'all':
         gene_file = all_gene_file
         metab_file = all_metab_file
