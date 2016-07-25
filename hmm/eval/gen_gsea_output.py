@@ -110,20 +110,20 @@ def run(cluster_directory_root, pathways):
                 gene_clusters[cluster] = list(gs)
 
             # run gene enrichment
-            genedir = '/'.join(cluster_dir.split('/') + ['gene_enrichment'])
+            genedir = '/'.join(cluster_dir.split('/') + [pathways + '_gene_enrichment'])
             genedir = genedir + '/'
             run_enrichment(gene_clusters, background_genes, gene_file,
                            genedir)
 
             # run metabolite enrichment
-            metabdir = '/'.join(cluster_dir.split('/') + ['metab_enrichment'])
+            metabdir = '/'.join(cluster_dir.split('/') + [pathways + 'metab_enrichment'])
             metabdir = metabdir + '/'
             run_enrichment(metab_clusters, background_metabolites,
                            metab_file, metabdir)
 
             # summarize
             sig_genes = get_sigs(genedir)
-            with(open(genedir + 'summary', 'w')) as f:
+            with(open(genedir + pathways + 'summary', 'w')) as f:
                 print >> f,  "Significant enrichments:"
                 for key, value in sig_genes.items():
                     print >> f, key
@@ -131,7 +131,7 @@ def run(cluster_directory_root, pathways):
                         print >> f, '\t', sig[0], sig[-3], sig[-2], sig[-1]
 
             sig_metabs = get_sigs(metabdir)
-            with(open(metabdir + 'summary', 'w')) as f:
+            with(open(metabdir + pathways + 'summary', 'w')) as f:
                 print >> f,  "Significant enrichments:"
                 for key, value in sig_metabs.items():
                     print >> f, key
