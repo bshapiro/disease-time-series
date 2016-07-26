@@ -116,7 +116,7 @@ def run(cluster_directory_root, pathways):
                            genedir)
 
             # run metabolite enrichment
-            metabdir = '/'.join(cluster_dir.split('/') + [pathways + 'metab_enrichment'])
+            metabdir = '/'.join(cluster_dir.split('/') + [pathways + '_metab_enrichment'])
             metabdir = metabdir + '/'
             run_enrichment(metab_clusters, background_metabolites,
                            metab_file, metabdir)
