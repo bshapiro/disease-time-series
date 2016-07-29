@@ -2,6 +2,7 @@ from templates import lr_hmm
 from load_data import load_data
 from pickle import load
 from templates import lr_hmm
+import time
 from collections import defaultdict
 import pandas as pd
 import numpy as np
@@ -49,7 +50,7 @@ if __name__ == '__main__':
         out_directory = '/'.join(out_directory)
         model = lr_hmm(sequences, data.columns.size, states_per_step,
                        self_trans=False, force_end=True, model_id='Profile HMM',
-                       seed=None)
+                       seed=int(time.time()))
 
         model.fit(sequences.astype(float),
                   verbose=SHOW_TRAINING,
