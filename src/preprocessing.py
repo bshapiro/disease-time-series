@@ -5,13 +5,14 @@ from sklearn.preprocessing import scale
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from numpy.linalg import svd as svd_func
+import os
 # from tools.helpers import *
 
 
 class Preprocessing:
 
     def __init__(self, data, sample_labels=None, feature_labels=None,
-                 transpose=False, dtype=float, odir=''):
+                 transpose=False, dtype=float):
         """
         UPDATE
         Notes:
@@ -31,11 +32,13 @@ class Preprocessing:
         self.data = pd.DataFrame(data=self.raw.copy(), index=self.raw_samples,
                                  columns=self.raw_features)
 
-        if transpose:
-            self.transpose()
-
+        self.allsamples = self.data.axes[0].get_values()
+        self.allfeatures = self.data.axes[1].get_values()
         self.samples = self.data.axes[0].get_values()
         self.features = self.data.axes[1].get_values()
+
+        if transpose:
+            self.transpose()
         # filter_data=None, operators=None, thresholds=None,
         # clean_components=None, regress_out=None,
 
@@ -47,7 +50,7 @@ class Preprocessing:
         - f[2] is a threshold for the filtering operation
         - f[3] axis to filtering on 0(rows/samples) or 1(cols/feautres)
 
-        include_nan, specified in config_include_nan says whether to filter out
+        include_nan, says whether to filter out
         nan values. nan values may appeaer because the filter_data must
         correspond with axes of the data matrix and you may not always have
         data on the condition you want to filter on for all samples/features
@@ -56,26 +59,22 @@ class Preprocessing:
         that satisfy the filter
         returns an array of the row/column elements included by the filter
         """
-        # TODO: this works well for filtering on conditions in the data
-        # or filtering on data outside the data once
-        # but if we want to filter on the same axis multiple times
-        # we need a way to keep track of removed indices since the
-        # user wont be able to easily recover which indices of the
-        # external data to include in the filtering process
-        # a solution to this is to add all the values they want to filter
-        # on to the self.data DataFrame to perform filtering then remove them
-
+        print 'Filtering: ', f
         f_data = f[0]
         f_operation = f[1]
         f_threshold = f[2]
         f_axis = f[3]
+        inc_nan = bool(include_nan)
 
+        # reduce f_data to reflect currently included features/samples
+        if f_axis == 0:
+            f_data = f_data[np.where(np.in1d(self.allsamples, self.samples))[0]]
+        if f_axis == 1:
+            f_data = f_data[np.where(np.in1d(self.allfeatures, self.features))[0]]
         operation = self.make_operation(f_operation, f_threshold)
         include = operation(f_data)
 
-        # if data is None:
-        #    data = self.data
-        if include_nan:
+        if inc_nan:
             nan_mask = np.isnan(f_data)
             include = np.logical_or(include, nan_mask)
 
@@ -95,15 +94,15 @@ class Preprocessing:
         """
         add operators we want to use here
         """
-        if operator is '<':
+        if operator == '<':
             return lambda x: x < threshold
-        if operator is '<=':
+        if operator == '<=':
             return lambda x: x <= threshold
-        if operator is '==':
+        if operator == '==':
             return lambda x: x == threshold
-        if operator is '>=':
+        if operator == '>=':
             return lambda x: x >= threshold
-        if operator is '>':
+        if operator == '>':
             return lambda x: x > threshold
 
     def clean(self, components=None, regress_out=None, update_data=True,
@@ -123,18 +122,22 @@ class Preprocessing:
         returns matrix of cleaned data
         """
         if components is None:
-            components = np.array([])
-        if type(components) is int:
-            components = np.arange(components)
+            components = np.array([], dtype=int)
+        # if type(components) is int:
+        #    components = np.arange(components)
 
         print "Cleaning data..."
         data = self.data.as_matrix()
         if scale_in:
             data = scale(data)
-        U, S, V = svd_func(data, full_matrices=False)
-        loadings = U[:, components]
+
+        loadings = np.array([])
+        if len(components) > 0:
+            U, S, V = svd_func(data, full_matrices=False)
+            loadings = U[:, components]
 
         new_data = np.copy(data)
+
         # if there is additional data to regress the data against, do that now
         if regress_out is not None:
             for r in regress_out:
@@ -142,6 +145,7 @@ class Preprocessing:
         # if we do actually have PCs to regress out do that now
         if loadings.size != 0:
             # loadings = loadings.reshape(-1, len(components))
+            print 'Regressing out PCs: ', components
             new_data = self.regress_out(loadings, new_data, 0)
 
         if scale_out:
@@ -163,7 +167,7 @@ class Preprocessing:
         print 'Axis: ', axis
 
         if axis == 1:
-            y = np.transpose(y)
+            y = y.T
 
         linreg = LinearRegression()
         linreg.fit(X, y)
@@ -179,6 +183,7 @@ class Preprocessing:
         """
         resets self.data to the original, raw data matrix
         """
+        print 'Reset to raw data'
         self.data = pd.DataFrame(data=self.raw.copy(), index=self.raw_samples,
                                  columns=self.raw_features)
         self.samples = self.data.axes[0].get_values()
@@ -196,12 +201,18 @@ class Preprocessing:
         log2 transform on data
         adds smoothing value to avoid log transform on non-positive values
         """
+        print 'Log transform with smoothing: ', smoothing
         self.data.loc[:, :] = np.log2(self.data.as_matrix() + smoothing)
 
     def transpose(self):
+        # transpose data, update sample and feature references
         self.data = self.data.T
         self.samples = self.data.index.values
         self.features = self.data.columns.values
+        # swap all sample and all feature values
+        temp = self.allsamples
+        self.allsamples = self.allfeatures
+        self.allfeatures = temp
 
 
 def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
@@ -286,7 +297,7 @@ if __name__ == "__main__":
     parser.add_option("-l", "--log_transform", action="store_true",
                       dest="log_transform", default=False,
                       help="If true performs log2 transform on data")
-    parser.add_option("--smoothing", default=1, dest="smoothing",
+    parser.add_option("--smoothing", default=0, dest="smoothing",
                       help="Smoothing value for log trasform")
 
     # scaling options
@@ -294,7 +305,7 @@ if __name__ == "__main__":
                       dest="scale_data", default=False,
                       help="If true scales data (default to mean 0 variance 1)")
     parser.add_option("--scale_axis", dest="scale_axis", default=0,
-                      help="Axis to scale one")
+                      help="Axis to scale on")
     parser.add_option("--center_off", action="store_false",
                       dest="center_off", default=True,
                       help="If enabled scale won't attempt to center data")
@@ -304,90 +315,90 @@ if __name__ == "__main__":
 
     # filtering options
     parser.add_option("-f", "--filter_data", dest="filter_data", default=None,
-                      help="List of data to filter on")
-    parser.add_option("-o", "--operators", dest="operators", default=None,
-                      help="List of operators for filtering")
-    parser.add_option("-t", "--thresholds", dest="thresholds", default=None,
-                      help="List of thresholds for operators")
-    parser.add_option("-a", "--filter_axes", dest="filter_axes", default=None,
-                      help="List of axes for each filter operation")
+                      nargs=4, action='append',
+                      help="4 args: filter data, operator, threshold, axis")
 
     # cleaning options
-    parser.add_option("-p", "--principal_components", dest="principal_components",
-                      default=[], help="List of PCs to regress out")
-    parser.add_option("--regress_cols", dest="regress_cols", default=None,
-                      help="Regress data on columns of matrix")
-    parser.add_option("--regress_rows", dest="regress_rows", default=None,
-                      help="Regress data on rows of matrix")
+    parser.add_option("-p", "--principal_component",
+                      dest="principal_components", action='append',
+                      default=[], nargs=1,
+                      help="List of PCs to regress out")
+    parser.add_option('-r', "--regress_out", dest="regress_out", action='append',
+                      default=[], nargs=2,
+                      help="Values and axis to regress data against")
 
     # output options
-    parser.add_option("--odir", dest="out_directory", default='',
-                      help="Output directory+prefix to prepend to any saved output"
+    parser.add_option("--out_directory", dest="out_directory", default='', type=str,
+                      help="Output directory to put any saved output"
                       )
-    parser.add_option("--saveas", dest="saveas", default='pickle',
+    parser.add_option("--savename", dest="savename",
+                      default='preprocessed_data',
+                      help="Name of preprocessed output data file"
+                      )
+    parser.add_option("--saveformat", dest="saveformat", default='txt',
                       help=("How to save data:" +
-                            "\'pickle\', \'mat\', \'R\', \'txt\'")
+                            "\'pickle\', \'txt\'")
                       )
 
     (options, args) = parser.parse_args()
 
-    datapath = options.in_dir + options.dataset
-
-    # has_row_labels = False
-    # has_row_labels = False
-
-    # if options.has_row_labels == 'True':
-    #    has_row_labels = True
-
-    # if options.has_col_labels == 'True':
-    #    has_col_labels = True
+    datapath = '/'.join(options.in_dir.split('/') + [options.dataset])
 
     data, row_labels, col_labels = load_file(datapath, options.filetype,
                                              options.has_row_labels,
                                              options.has_col_labels)
 
-    print row_labels
-    print col_labels
-    p = Preprocessing(data, row_labels, col_labels, options.transpose, float,
-                      options.out_directory)
+    p = Preprocessing(data, row_labels, col_labels, options.transpose, float)
+    print 'Index: ', p.samples
+    print 'Columns:', p.features
 
     filter_data = options.filter_data
-    operators = options.operators
-    thresholds = options.thresholds
-    filter_axes = options.filter_axes
 
     if filter_data is not None:
         for i in range(len(filter_data)):
-            filter_data[i] = pickle.load(open(filter_data[i]))
+            filepath = options.in_dir.split('/') + [filter_data[i][0]]
+            filepath = '/'.join(filepath)
+            filter_data[i] = (np.array(pickle.load(open(filepath))),
+                              filter_data[i][1],
+                              float(filter_data[i][2]), int(filter_data[i][3]))
 
-        filters = zip(filter_data, operators, thresholds, filter_axes)
-        for f in filters:
+        for f in filter_data:
             p.filter(f)
 
     if options.log_transform:
-        p.log_transform(options.smoothing)
+        p.log_transform(int(options.smoothing))
 
     if options.scale_data:
-        p.scale(options.scale_axis, options.center_off, options.unit_std_off)
-    regress_rows = options.regress_rows
-    regress_cols = options.regress_cols
+        p.scale(int(options.scale_axis), options.center_off,
+                options.unit_std_off)
+
     pc = options.principal_components
+    regress_out = options.regress_out
 
-    regress_out = []
-    if regress_rows is not None:
-        regress_out.append([(pickle.load(open(rr)), 1) for rr in regress_rows])
-    if regress_cols is not None:
-        regress_out.append([(pickle.load(open(rc)), 0) for rc in regress_cols])
-    p.clean(pc, regress_out)
+    for i, reg in enumerate(regress_out):
+        filepath = options.in_dir.split('/') + [reg[0]]
+        filepath = '/'.join(filepath)
+        regress_out[i] = (pickle.load(open(filepath, 'r')).reshape(-1, 1), regress_out[i][1])
 
-    savename = options.out_directory + 'preprocessed_data'
+    for i in range(len(options.principal_components)):
+        pc[i] = int(pc[i])
+
+    p.clean(pc, regress_out, scale_in=False, scale_out=False)
+
+    # make directory if it doesnt exist
+    odir = str('/'.join(options.out_directory.split('/')[-1:]))
+    if options.out_directory != '' and not os.path.isdir(odir):
+        print 'Making directory: ', odir
+        os.makedirs(odir)
+
+    savename = '/'.join(options.out_directory.split('/')[-1:] +
+                        [options.savename])
     print "Saving processed data to: ", savename
 
-    if options.saveas is 'pickle':
+    # save output
+    if options.saveformat is 'pickle':
         pickle.dump(p.data, open(savename, 'wb'))
-    if options.saveas is 'csv':
-        p.data.to_csv(path_or_buf=savename, sep=',')
-    if options.saveas is 'tsv':
+    if options.saveformat is 'txt':
         p.data.to_csv(path_or_buf=savename, sep='\t')
 
     # TODO: be able to save for use in r and matlab
