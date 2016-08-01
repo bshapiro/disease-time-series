@@ -32,12 +32,15 @@ Filtering:
     -threshold is a value to threshold on
     -axis is what axis to perform the filtering on: 0 for rows, 1 for columns
     - to perform multiple filterings use the '-f' flag as many times as you'd like with corresponding arguments
+    -NOTE the dimension of the filter data should agree with the dimension of the axis we are filtering against
 
 Regression:
     use the '-r' or '--regress_out' flag
     2 arguments: values to regress against, axis to do regression on
     -values are a pickle of an array/matrix you want to regress your data against
     -axis specified what axis to do the regression on 0 for rows, 1 for columns
+    -NOTE: you will want the dimension of your values matrix and the axis you are regressing on to agree. DO NOT USE FLATTENED ARRAYS
+    eg. if we have an n x m matrix and want to regress on axis 0 use an n x k values matrix where k is the number of covariates we are regressing out
 
 Regressing Principal Components:
     use the '-p' flag or '--principal_component' flag

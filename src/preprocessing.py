@@ -60,7 +60,7 @@ class Preprocessing:
         returns an array of the row/column elements included by the filter
         """
         print 'Filtering: ', f
-        f_data = f[0]
+        f_data = np.array(f[0]).flatten()
         f_operation = f[1]
         f_threshold = f[2]
         f_axis = f[3]
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     for i, reg in enumerate(regress_out):
         filepath = options.in_dir.split('/') + [reg[0]]
         filepath = '/'.join(filepath)
-        regress_out[i] = (pickle.load(open(filepath, 'r')).reshape(-1, 1), regress_out[i][1])
+        regress_out[i] = (pickle.load(open(filepath, 'r')), regress_out[i][1])
 
     for i in range(len(options.principal_components)):
         pc[i] = int(pc[i])
