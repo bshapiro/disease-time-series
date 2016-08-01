@@ -1,5 +1,13 @@
 This is a preprocessing script. You can give it raw data and have it perform simple cleaning operations: scaling/whitening, logtransforming, filtering out samples/features, regressing out covariates and principal components
 
+ORDER OF OPERATIONS:
+1. load the file, create preprocessing object
+2. perform any filtering specified
+3. log transform data if specified, smoothin by value of log_smoothing (default 0)
+4. scale if specified
+5. data cleaning on pcs and values specified in regress_rows/regress_cols
+6. save output
+
 Overview:
 
 --in_directory specified the directory to look for all files, use it if all your files are in one place
@@ -30,7 +38,7 @@ Filtering:
     -data is a pickle of an array with the values that you want to filter on
     -operation is from a list of predifined operations. right now we have '==', '>', '>=', '<', '<=' but you can add easily by adding a new operation label and corresponding lambda in make_operation method
     -threshold is a value to threshold on
-    -axis is what axis to perform the filtering on: 0 for rows, 1 for columns
+    -axis is what axis to perform the filtering on
     - to perform multiple filterings use the '-f' flag as many times as you'd like with corresponding arguments
     -NOTE the dimension of the filter data should agree with the dimension of the axis we are filtering against
 
@@ -38,7 +46,7 @@ Regression:
     use the '-r' or '--regress_out' flag
     2 arguments: values to regress against, axis to do regression on
     -values are a pickle of an array/matrix you want to regress your data against
-    -axis specified what axis to do the regression on 0 for rows, 1 for columns
+    -axis specified what axis to do the regression on
     -NOTE: you will want the dimension of your values matrix and the axis you are regressing on to agree. DO NOT USE FLATTENED ARRAYS
     eg. if we have an n x m matrix and want to regress on axis 0 use an n x k values matrix where k is the number of covariates we are regressing out
 
