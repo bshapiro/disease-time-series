@@ -306,11 +306,11 @@ if __name__ == "__main__":
                       help="If true scales data (default to mean 0 variance 1)")
     parser.add_option("--scale_axis", dest="scale_axis", default=0,
                       help="Axis to scale on")
-    parser.add_option("--center_on", action="store_false",
-                      dest="center_on", default=True,
+    parser.add_option("--center_off", action="store_false",
+                      dest="center", default=True,
                       help="If enabled scale won't attempt to center data")
-    parser.add_option("--unit_std_on", action="store_false",
-                      dest="unit_std_on", default=True,
+    parser.add_option("--unit_std_off", action="store_false",
+                      dest="unit_std", default=True,
                       help="If enabled scale won't scale to unit-normal")
 
     # filtering options
@@ -369,8 +369,8 @@ if __name__ == "__main__":
             p.filter(f)
 
     if options.scale_data:  # TODO: use nanstd + nanmean to handle missing data
-        p.scale(int(options.scale_axis), options.center_on,
-                options.unit_std_on)
+        p.scale(int(options.scale_axis), options.center,
+                options.unit_std)
 
     regress_out = options.regress_out
 
