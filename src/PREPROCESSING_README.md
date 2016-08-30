@@ -76,5 +76,6 @@ More examples to come!
 
 ##FUTURE IMPROVEMENTS:
 - allow  covariates and filter data to be passsed in as .txt files
+- allow/handle missing data
 - allow results to be saved in MATLAB or R format
 - add more examples to this README
