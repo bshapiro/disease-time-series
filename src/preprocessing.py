@@ -1,11 +1,11 @@
-import numpy as np
-import pickle
-from optparse import OptionParser
-from sklearn.preprocessing import scale
-import pandas as pd
-from sklearn.linear_model import LinearRegression
 from numpy.linalg import svd as svd_func
+from optparse import OptionParser
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import scale
+import numpy as np
 import os
+import pandas as pd
+import pickle
 # from tools.helpers import *
 
 
@@ -51,7 +51,7 @@ class Preprocessing:
         - f[3] axis to filtering on 0(rows/samples) or 1(cols/feautres)
 
         include_nan, says whether to filter out
-        nan values. nan values may appeaer because the filter_data must
+        nan values. nan values may appear because the filter_data must
         correspond with axes of the data matrix and you may not always have
         data on the condition you want to filter on for all samples/features
 
@@ -156,11 +156,10 @@ class Preprocessing:
 
         return new_data
 
-    def regress_out(self, X, y, axis):
+    def regress_out(self, X, y, axis=0):
         """
         regresses X on y
-        by defauly y is the matrix in self.data
-        if you don't specify an axis it assumes 0
+        by default y is the matrix in self.data
         """
         print 'Regressing out variable...'
 
@@ -219,7 +218,7 @@ def load_file(source, filetype, has_row_labels=False, has_col_labels=False):
     """
     Loads data from filename and returns it.
     Must specifiy filetype 'csv', 'tsv', 'pickle'
-    We assum txt files are comma or tab delimited
+    We assume txt files are comma or tab delimited
     if has_row_labels is true it takes the first column to be labels
     if has_col_labels is true it takes the first row to be labels
     format data to fit these specs
@@ -264,9 +263,9 @@ if __name__ == "__main__":
     """
     Order of operations:
     1. load the file, create preprocessing object
-    2. perform any filtering specified
-    3. log transform data if specified, smoothin by value of log_smoothing
+    2. log transform data if specified, smoothin by value of log_smoothing
        (default 1)
+    3. perform any filtering specified
     4. scale if specified (scaled columns to have mean 0 variance 1)
     5. data cleaning on pcs and values specified in regress_rows/regress_cols
     6. save output
