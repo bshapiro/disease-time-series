@@ -352,6 +352,9 @@ if __name__ == "__main__":
     print 'Index: ', p.samples
     print 'Columns:', p.features
 
+    if options.log_transform:
+        p.log_transform(int(options.smoothing))
+
     filter_data = options.filter_data
 
     if filter_data is not None:
@@ -364,9 +367,6 @@ if __name__ == "__main__":
 
         for f in filter_data:
             p.filter(f)
-
-    if options.log_transform:
-        p.log_transform(int(options.smoothing))
 
     if options.scale_data:
         p.scale(int(options.scale_axis), options.center_on,
