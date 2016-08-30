@@ -1,6 +1,6 @@
 #Preprocessing Tool
 
-This is a preprocessing script. You can give it raw data and have it perform simple cleaning operations: scaling/whitening, logtransforming, filtering out samples/features, regressing out covariates and principal components
+This is a preprocessing tool. You can give it raw data and have it perform simple cleaning operations: scaling/whitening, logtransforming, filtering out samples/features, regressing out covariates and principal components. All options for preprocessing can be specified via command-line (see below), or you can import the class directly for use in your own python script.
 
 ##ORDER OF OPERATIONS
 
@@ -55,7 +55,7 @@ This is a preprocessing script. You can give it raw data and have it perform sim
 
 
 
-##EXAMPLE
+##EXAMPLES
 
 
 ```
@@ -65,9 +65,16 @@ python preprocessing.py --in_directory dir -d datafile --filetype tsv --has_row_
 
 What it does:
 - Will use tab separated textfile datafile in directory dir,
-- Interperet datafile to have row and column labels
+- Interperet datafile to have row and column labels,
 - Scale and center the data,
 - Filter samples(rows, axis 0) to values where filtervals1 == 0,
 - Filter features(columns, axis 1) to values where filtervals2 <= 3,
 - Regress out the first three principal components,
 - Save output file as a tab separated text file to directory outdir
+
+More examples to come!
+
+##FUTURE IMPROVEMENTS:
+- allow  covariates and filter data to be passsed in as .txt files
+- allow results to be saved in MATLAB or R format
+- add more examples to this README
