@@ -321,7 +321,7 @@ if __name__ == "__main__":
     # cleaning options
     parser.add_option("-p", "--principal_component",
                       dest="principal_components", action='append',
-                      default=[], nargs=1,
+                      default=[], type=int, nargs=1,
                       help="List of PCs to regress out")
     parser.add_option('-r', "--regress_out", dest="regress_out", action='append',
                       default=[], nargs=2,
@@ -368,11 +368,10 @@ if __name__ == "__main__":
         for f in filter_data:
             p.filter(f)
 
-    if options.scale_data:
+    if options.scale_data:  # TODO: use nanstd + nanmean to handle missing data
         p.scale(int(options.scale_axis), options.center_on,
                 options.unit_std_on)
 
-    pc = options.principal_components
     regress_out = options.regress_out
 
     for i, reg in enumerate(regress_out):
@@ -380,10 +379,7 @@ if __name__ == "__main__":
         filepath = '/'.join(filepath)
         regress_out[i] = (pickle.load(open(filepath, 'r')), regress_out[i][1])
 
-    for i in range(len(options.principal_components)):
-        pc[i] = int(pc[i])
-
-    p.clean(pc, regress_out, scale_in=False, scale_out=False)
+    p.clean(options.principal_components, regress_out, scale_in=False, scale_out=False)
 
     # make directory if it doesnt exist
     odir = str('/'.join(options.out_directory.split('/')[-1:]))
@@ -408,3 +404,5 @@ if __name__ == "__main__":
     #    r_df = pandas2ri.pi2ri(p.data)
     # if options.saveas is 'mat':
     #    import scipy.io as sio
+
+    # TODO: handle missing data
