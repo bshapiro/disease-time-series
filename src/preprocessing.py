@@ -306,11 +306,11 @@ if __name__ == "__main__":
                       help="If true scales data (default to mean 0 variance 1)")
     parser.add_option("--scale_axis", dest="scale_axis", default=0,
                       help="Axis to scale on")
-    parser.add_option("--center_off", action="store_false",
-                      dest="center_off", default=True,
+    parser.add_option("--center_on", action="store_false",
+                      dest="center_on", default=True,
                       help="If enabled scale won't attempt to center data")
-    parser.add_option("--unit_std_off", action="store_false",
-                      dest="unit_std_off", default=True,
+    parser.add_option("--unit_std_on", action="store_false",
+                      dest="unit_std_on", default=True,
                       help="If enabled scale won't scale to unit-normal")
 
     # filtering options
@@ -369,8 +369,8 @@ if __name__ == "__main__":
         p.log_transform(int(options.smoothing))
 
     if options.scale_data:
-        p.scale(int(options.scale_axis), options.center_off,
-                options.unit_std_off)
+        p.scale(int(options.scale_axis), options.center_on,
+                options.unit_std_on)
 
     pc = options.principal_components
     regress_out = options.regress_out
@@ -405,6 +405,6 @@ if __name__ == "__main__":
     # if options.saveas is 'r':
     #    from rpy2.robjects import pandas2ri
     #    pandas2ri.activate()
-    #    r_df = padas2ri.pi2ri(p.data)
+    #    r_df = pandas2ri.pi2ri(p.data)
     # if options.saveas is 'mat':
     #    import scipy.io as sio
