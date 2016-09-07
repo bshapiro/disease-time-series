@@ -62,7 +62,7 @@ class Preprocessing:
         print 'Filtering: ', f
         f_data = np.array(f[0]).flatten()
         f_operation = f[1]
-        f_threshold = f[2]
+        f_threshold = type(f_data[0])(f[2])
         f_axis = f[3]
         inc_nan = bool(include_nan)
 
@@ -327,7 +327,7 @@ if __name__ == "__main__":
                       help="Values and axis to regress data against")
 
     # output options
-    parser.add_option("--out_directory", dest="out_directory", default='', type=str,
+    parser.add_option("--out_directory", dest="out_directory", default='.', type=str,
                       help="Output directory to put any saved output"
                       )
     parser.add_option("--savename", dest="savename",
@@ -362,7 +362,7 @@ if __name__ == "__main__":
             filepath = '/'.join(filepath)
             filter_data[i] = (np.array(pickle.load(open(filepath))),
                               filter_data[i][1],
-                              float(filter_data[i][2]), int(filter_data[i][3]))
+                              filter_data[i][2], int(filter_data[i][3]))
 
         for f in filter_data:
             p.filter(f)
