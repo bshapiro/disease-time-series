@@ -41,7 +41,7 @@ if __name__ == '__main__':
     gc, mt, track = load_data()
     genes = load(open(genefile,  'r'))
 
-    data = pd.concat((gc.data.loc[genes, :], mt.data))
+    data = (gc.data.loc[genes, :])
     sequences = data.as_matrix()
 
     for x in range(restarts):
