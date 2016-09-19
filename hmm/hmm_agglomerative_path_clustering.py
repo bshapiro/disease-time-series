@@ -2,7 +2,6 @@ import addpath
 import pandas as pd
 import numpy as np
 from pomegranate import HiddenMarkovModel
-from src.representation import Representation
 from load_data import load_data
 from pickle import load, dump
 import json
@@ -113,10 +112,5 @@ model_path = '../results/profile_hmm/1k5ssp/0/model'
 model = HiddenMarkovModel.from_json(model_path)
 
 k = 100
-assignments, centers = Representation(data).kmeans(k)
-clusters = {}
-for i in range(k):
-    clusters[i] = \
-        data.index.values[np.where(assignments == i)[0]].tolist()
 Z = linkage(data, model)
 dump(Z, open('linkage.p', 'wb'))
