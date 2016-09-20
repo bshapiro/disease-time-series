@@ -1,6 +1,7 @@
 import addpath
 import pandas as pd
 import numpy as np
+import sys
 from pomegranate import HiddenMarkovModel
 from load_data import load_data
 from pickle import load, dump
@@ -111,10 +112,10 @@ genes = load(open(genefile,  'r'))
 data = pd.concat((gc.data.loc[genes, :], mt.data))
 sequences = data.as_matrix()
 
-model_path = '../results/profile_hmm/1k5ssp/0/model'
+model_path = '/'.join((sys.argv[1]).split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
 # k = 100
 Z = linkage(data, model)
-dump(Z, open('linkage1k.p', 'wb'))
-Z = hierarchy.linkage()
+linkage_path = '/'.join(model_path.split('/')[:-1] + ['linkage.p'])
+dump(Z, open(linkage_path, 'wb'))
