@@ -15,6 +15,8 @@ THREADCOUNT = 2
 SHOW_TRAINING = True
 RESTARTS = 4
 ALGORITHM = 'baum-welch'
+# ALGORITHM = 'viterbi'
+STOP_THRESHOLD = 1e6
 
 if __name__ == '__main__':
     try:
@@ -54,6 +56,7 @@ if __name__ == '__main__':
 
         model.fit(sequences.astype(float),
                   verbose=SHOW_TRAINING,
+                  stop_threshold=STOP_THRESHOLD,
                   algorithm=ALGORITHM,
                   n_jobs=THREADCOUNT)
 
