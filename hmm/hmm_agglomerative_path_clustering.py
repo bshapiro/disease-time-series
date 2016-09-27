@@ -34,6 +34,22 @@ def joint_sequence_liklihood(sequence1, sequence2, model):
     return joint_log_prob
 
 
+def cluster_liklihood(sequence_probs, cluster, model):
+    """
+    sequences is the matrix of sequnece data
+    cluster1 and cluster2 are lists of indexes into sequences
+    model is the hmm
+    """
+    probmat = np.ones((data.columns.size, model.state_count() - 2))
+    for sequence in data.loc[cluster, :].T:
+        seqprob = sequence_probs[sequence]
+        probmat = np.multiply(probmat, seqprob)
+    p = probmat.sum(1)  # marginalize out states
+    p = np.log(p)
+    p = p.sum()  # log prob
+    return p
+
+
 def joint_cluster_liklihood(sequence_probs, cluster1, cluster2, model):
     """
     sequences is the matrix of sequnece data
@@ -41,33 +57,27 @@ def joint_cluster_liklihood(sequence_probs, cluster1, cluster2, model):
     model is the hmm
     """
     cluster = list(set(cluster1 + cluster2))
-    probmat = np.ones((data.columns.size, model.state_count() - 2))
-    for sequence in data.loc[cluster, :].T:
-        seqprob = sequence_probs[sequence]
-        probmat = np.multiply(probmat, seqprob)
-    p = probmat.sum(1)  # marginalize out states
-    p = np.log(p)
-    p = p.sum()  # negative log prob
-    return p
+    return cluster_liklihood(sequence_probs, cluster, model)
 
 
 def gen_mergemat_complete(sequence_probs, clusters, model):
     """
-    calculates joing cluster liklihood for all pairs of existing clusters
-    returns a condensed matrix of average negative log probabilities
+    calculates increase in negative log prob resulting from merge
+    for all potential merges
     """
     mergemat = np.empty((len(clusters), len(clusters)))
     mergemat.fill(-1 * np.inf)
     print "Generating merged liklihoods..."
     for i, c1 in enumerate(sorted(clusters.keys())):
+        mergemat[i, i] = cluster_liklihood(sequence_probs, clusters[c1],
+                                           model)
         for j, c2 in enumerate(sorted(clusters.keys())):
             if j > i:
-                avgll = joint_cluster_liklihood(sequence_probs, clusters[c1],
-                                                clusters[c2], model)
-                avgll = avgll / (len(clusters[c1]) + len(clusters[c2]))
+                nlp = joint_cluster_liklihood(sequence_probs,
+                                              clusters[c1],
+                                              clusters[c2], model)
                 print i, j
-                mergemat[i, j] = avgll
-                mergemat[j, i] = avgll
+                mergemat[i, j] = nlp - mergemat[i, i]
 
     mergemat = pd.DataFrame(data=mergemat, index=sorted(clusters.keys()),
                             columns=sorted(clusters.keys()))
@@ -86,12 +96,18 @@ def make_merge(clusters, mergemat, k, sequence_probs, model):
     """
 
     # choose clusters to merge
-    m = np.where(mergemat == mergemat.max().max())
-    o1 = mergemat.index[m[0][0]]
-    o2 = mergemat.index[m[1][0]]
+    o1 = 0
+    o2 = 1
+    mm = mergemat.iloc[o1, o2]
+    for i in range(0, mergemat.index.size):
+        for j in range(i, mergemat.index.size):
+            if (j > i) and (mm < mergemat.iloc[i, j]):
+                o1 = i
+                o2 = j
+                mm = mergemat.iloc[i, j]
 
-    # merge clusters
-    mm = mergemat.max().max()
+    o1 = mergemat.index[o1]
+    o2 = mergemat.index[o2]
     print 'Merging clusters:', o1, o2, mm, k
     if mm <= (-1 * np.inf):
         return None, clusters, mergemat
@@ -108,15 +124,13 @@ def make_merge(clusters, mergemat, k, sequence_probs, model):
     # add new cluster to mergemat
     mergemat.loc[k, :] = -1 * np.inf
     mergemat.loc[:, k] = -1 * np.inf
+    mergemat.loc[k, k] = cluster_liklihood(sequence_probs, clusters[k], model)
     for cid in mergemat.index:
         if cid != k:
-            avgll = joint_cluster_liklihood(sequence_probs, clusters[cid],
-                                            clusters[k], model)
-            avgll = np.log(np.exp(avgll /
-                                  (len(clusters[k]) + len(clusters[cid]))))
+            nlp = joint_cluster_liklihood(sequence_probs, clusters[cid],
+                                          clusters[k], model)
 
-            mergemat.loc[cid, k] = avgll
-            mergemat.loc[k, cid] = avgll
+            mergemat.loc[cid, k] = nlp - mergemat.loc[k, k]
 
     # assemble column of linkage matrix
     col = np.array([o1, o2, -1 * mm, ksize])
@@ -183,13 +197,12 @@ def sequence_state_liklihood(sequence, statepath, model):
     return lp
 
 
-def vit_cluster_liklihood(similarity, cluster1, cluster2, model):
+def vit_cluster_liklihood(similarity, cluster, model):
     """
     sequences is the matrix of sequnece data
     cluster1 and cluster2 are lists of indexes into sequences
     model is the hmm
     """
-    cluster = list(set(cluster1 + cluster2))
     joint_liklihood = np.empty(len(cluster))
     for i, seq1 in enumerate(data.loc[cluster, :].index):
         subsum = 0
@@ -199,6 +212,16 @@ def vit_cluster_liklihood(similarity, cluster1, cluster2, model):
         joint_liklihood[i] = subsum
     joint_liklihood = np.log(np.sum(joint_liklihood))
     return joint_liklihood
+
+
+def vit_joint_cluster_liklihood(similarity, cluster1, cluster2, model):
+    """
+    sequences is the matrix of sequnece data
+    cluster1 and cluster2 are lists of indexes into sequences
+    model is the hmm
+    """
+    cluster = list(set(cluster1 + cluster2))
+    return vit_cluster_liklihood(similarity, cluster, model)
 
 
 def viterbi_pair_similarity(data, vpaths, model):
@@ -217,26 +240,28 @@ def viterbi_pair_similarity(data, vpaths, model):
     return similarity
 
 
-def gen_mergemat(similarity, clusters, model):
+def gen_mergemat_vit(similarity, clusters, model):
     """
     calculates joing cluster liklihood for all pairs of existing clusters
     returns a condensed matrix of average negative log probabilities
     """
+
     mergemat = np.empty((len(clusters), len(clusters)))
     mergemat.fill(-1 * np.inf)
-    mergemat = pd.DataFrame(data=mergemat, index=clusters.keys(),
-                            columns=clusters.keys())
-    for i, c1 in enumerate(mergemat.index):
-        for j, c2 in enumerate(mergemat.columns):
+    print "Generating merged liklihoods..."
+    for i, c1 in enumerate(sorted(clusters.keys())):
+        mergemat[i, i] = vit_cluster_liklihood(similarity, clusters[c1],
+                                               model)
+        for j, c2 in enumerate(sorted(clusters.keys())):
             if j > i:
-                avgll = vit_cluster_liklihood(similarity, clusters[c1],
-                                              clusters[c2], model)
-                avgll = np.log(np.exp(avgll /
-                                      (len(clusters[c1]) + len(clusters[c2]))))
+                nlp = vit_joint_cluster_liklihood(similarity,
+                                                  clusters[c1],
+                                                  clusters[c2], model)
                 print i, j
-                mergemat.loc[c1, c2] = avgll
-                mergemat.loc[c2, c1] = avgll
+                mergemat[i, j] = nlp - mergemat[i, i]
 
+    mergemat = pd.DataFrame(data=mergemat, index=sorted(clusters.keys()),
+                            columns=sorted(clusters.keys()))
     return mergemat
 
 
@@ -250,18 +275,23 @@ def vit_make_merge(clusters, mergemat, k, similarity, model):
     similarity is the pairwise similarity matrix
     model is the HMM
     """
-
     # choose clusters to merge
-    m = np.where(mergemat == mergemat.max().max())
-    o1 = mergemat.index[m[0][0]]
-    o2 = mergemat.index[m[1][0]]
+    o1 = 0
+    o2 = 1
+    mm = mergemat.iloc[o1, o2]
+    for i in range(0, mergemat.index.size):
+        for j in range(i, mergemat.index.size):
+            if (j > i) and (mm < mergemat.iloc[i, j]):
+                o1 = i
+                o2 = j
+                mm = mergemat.iloc[i, j]
 
-    # merge clusters
-    mm = mergemat.max().max()
+    o1 = mergemat.index[o1]
+    o2 = mergemat.index[o2]
+    print 'Merging clusters:', o1, o2, mm, k
     if mm <= (-1 * np.inf):
         return None, clusters, mergemat
 
-    print 'Merging clusters:', o1, o2, mm
     clusters[k] = clusters.pop(o1) + clusters.pop(o2)
     ksize = len(clusters[k])
 
@@ -274,14 +304,13 @@ def vit_make_merge(clusters, mergemat, k, similarity, model):
     # add new cluster to mergemat
     mergemat.loc[k, :] = -1 * np.inf
     mergemat.loc[:, k] = -1 * np.inf
+    mergemat.loc[k, k] = vit_cluster_liklihood(similarity, clusters[k], model)
     for cid in mergemat.index:
         if cid != k:
-            avgll = vit_cluster_liklihood(similarity, clusters[cid],
-                                          clusters[k], model)
-            avgll = np.log(np.exp(avgll /
-                                  (len(clusters[cid]) + len(clusters[k]))))
-            mergemat.loc[cid, k] = avgll
-            mergemat.loc[cid, k] = avgll
+            nlp = vit_joint_cluster_liklihood(similarity, clusters[cid],
+                                              clusters[k], model)
+
+            mergemat.loc[cid, k] = nlp - mergemat.loc[k, k]
 
     # assemble column of linkage matrix
     col = np.array([o1, o2, -1 * mm, ksize])
@@ -289,7 +318,7 @@ def vit_make_merge(clusters, mergemat, k, similarity, model):
     return col, clusters, mergemat
 
 
-def fast_linkage(data, model, start_clusters=None):
+def vit_linkage(data, model, start_clusters=None):
     """
     perform heirarchecal clustering on sequences over an HMM
     returns a linkage matrix Z formatted to scipy standards
@@ -301,39 +330,37 @@ def fast_linkage(data, model, start_clusters=None):
     else:
         clusters = start_clusters
 
-    step = 0
     vpaths = {seq: model.predict(data.loc[seq, :])
               for seq in data.index.values}
 
     similarity = viterbi_pair_similarity(data, vpaths, model)
-    mergemat = gen_mergemat(similarity, clusters, model)
-
+    mergemat = gen_mergemat_vit(similarity, clusters, model)
     # cluster merging
+    k = n  # new cluster id
     while len(clusters) > 1:
-        k = n + step  # new cluster id
         # perform merge
-        try:
-            col, clusters, mergemat = \
-                vit_make_merge(clusters, mergemat, k, similarity, model)
-
-            Z = np.concatenate((Z, col), 0)
-            step += 1
-        except:
+        col, clusters, mergemat = \
+            vit_make_merge(clusters, mergemat, k, similarity, model)
+        if col is None:
             break
 
+        Z = np.concatenate((Z, col), 0)
+        k += 1
+
+    q = k  # new cluster id
     while len(clusters) > 1:
-        q = n + step  # new cluster id
         # perform fake merge
+        print 'Fake merge:', q
         c1 = clusters.keys()[0]
         c2 = clusters.keys()[1]
         clusters[q] = clusters.pop(c1) + clusters.pop(c2)
         col = np.array([c1, c2, q, len(clusters[q])])
         col = col.reshape(1, 4)
         Z = np.concatenate((Z, col), 0)
-        step += 1
+        q += 1
 
     Z = Z[1:, :]
-    return Z, mergemat, clusters, data, similarity
+    return Z, k
 
 genefile = '1k_genes.p'
 gc, mt, track = load_data()
@@ -344,9 +371,9 @@ sequences = data.as_matrix()
 model_path = '/'.join((sys.argv[1]).split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
-Z, k = linkage(data, model)
-linkage_path = '/'.join(model_path.split('/')[:-1] + ['linkage.p'])
-dump(Z, open(linkage_path, 'wb'))
+Z, k = linkage(data.iloc[:100, :], model)
+# linkage_path = '/'.join(model_path.split('/')[:-1] + ['linkage.p'])
+# dump(Z, open(linkage_path, 'wb'))
 
 # k = 100
 # Z, mm, c, d, s = fast_linkage(data.iloc[:50, :], model)
