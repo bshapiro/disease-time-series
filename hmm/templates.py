@@ -3,7 +3,7 @@ import math
 from pomegranate import HiddenMarkovModel, State, NormalDistribution
 
 
-def gaussian_hmm(sequences, n_states, model_id, seed=None):
+def gaussian_hmm_from_data(sequences, n_states, model_id, seed=None):
     """
     insantiate a model with random parameters
     randomly generates start and transition matrices
@@ -68,6 +68,55 @@ def gaussian_hmm(sequences, n_states, model_id, seed=None):
     return model
 
 
+def gaussian_hmm(n_states, lower, upper, variance, model_id, seed=None):
+    """
+    insantiate a model with random parameters
+    randomly generates start and transition matrices
+    generates nomal distrobutions for each state from partition on sequences
+    """
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    model = HiddenMarkovModel(model_id)
+
+    # make states with distrobutions from random subsets of timepoints
+    x = np.linspace(lower, upper, n_states)
+    states = []
+    for i in range(n_states):
+        dist = \
+            NormalDistribution(x[i], variance)
+        states.append(State(dist, name=str(i)))
+
+    model.add_states(states)
+
+    # add uniform start probabilities
+    start_prob = 1.0 / n_states
+    start_probs = []
+    for i in range(n_states):
+        start_probs.append(start_prob + np.random.ranf())
+    start_probs = np.array(start_probs)
+    start_probs = start_probs / start_probs.sum()
+    for i, state in enumerate(states):
+        model.add_transition(model.start, state, start_probs[i])
+
+    # add transition probabilities proportional to probability of generating
+    # one state mean from another
+    for state1 in states:
+        transitions = []
+        for other_state in states:
+            transitions.append(np.exp(state1.distribution.log_probability(
+                other_state.distribution.parameters[0])) + np.random.ranf())
+        transitions = np.array(transitions)
+        transitions = transitions / transitions.sum()
+        for i, state2 in enumerate(states):
+            model.add_transition(state1, state2, transitions[i])
+
+    model.bake()
+    print 'Initialized HMM: ', model.name
+    return model
+
+
 def lr_hmm(sequences, steps, states_per_step, self_trans=True, force_end=False,
            model_id='Left-Righ HMM', seed=None):
     """
@@ -108,6 +157,7 @@ def lr_hmm(sequences, steps, states_per_step, self_trans=True, force_end=False,
     # make random transition from start -> step0
     trans = np.random.ranf(states_per_step)
     trans = trans / trans.sum()
+    trans = [1.0 / states_per_step] * states_per_step
     for j in range(states_per_step):
         model.add_transition(model.start, states[0, j], trans[j])
 
@@ -118,11 +168,13 @@ def lr_hmm(sequences, steps, states_per_step, self_trans=True, force_end=False,
             # if allowing self transition, add self transition
             if self_trans:
                 trans = trans / trans.sum()
+                trans = [1.0 / (states_per_step + 1)] * (states_per_step + 1)
                 model.add_transition(states[i, j], states[i, j], trans[0])
             # otherwise ignore and renormalize transition probabilities
             else:
                 trans[0] = 0
                 trans = trans / trans.sum()
+                trans = [0] + [1.0 / states_per_step] * states_per_step
             # set out transitions
             for x in range(states_per_step):
                 model.add_transition(states[i, j], states[i + 1, x],
@@ -133,6 +185,7 @@ def lr_hmm(sequences, steps, states_per_step, self_trans=True, force_end=False,
         for j in range(states_per_step):
             trans = np.random.ranf(2)
             trans = trans / trans.sum()
+            trans = [1.0 / states_per_step] * states_per_step
             # self transition
             model.add_transition(states[(steps - 1), j],
                                  states[(steps - 1), j], trans[0])
