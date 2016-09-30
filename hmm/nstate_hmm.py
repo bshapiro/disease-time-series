@@ -67,7 +67,8 @@ if __name__ == '__main__':
     for x in range(restarts):
         out_directory = odir.split('/') + [str(x)]
         out_directory = '/'.join(out_directory)
-        model = gaussian_hmm(n_states, lower, upper, var, model_id='n-state HMM')
+        model = gaussian_hmm(n_states=n_states, lower=lower, upper=upper,
+                             variance=var, model_id='n-state HMM')
 
         model.fit(sequences.astype(float),
                   verbose=SHOW_TRAINING,
