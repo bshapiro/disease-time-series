@@ -6,6 +6,7 @@ from pomegranate import HiddenMarkovModel
 from load_data import load_data
 from pickle import load, dump
 from scipy.cluster import hierarchy
+import os
 
 
 def sequence_state_similarity(model, sequences):
@@ -362,7 +363,10 @@ def vit_linkage(data, model, start_clusters=None):
     Z = Z[1:, :]
     return Z, k
 
-genefile = '1k_genes.p'
+genefile = sys.argv[1]
+model_path = sys.argv[2]
+out_directory = sys.argv[3]
+
 gc, mt, track = load_data()
 genes = load(open(genefile,  'r'))
 data = gc.data.loc[genes, :]
@@ -371,9 +375,13 @@ sequences = data.as_matrix()
 model_path = '/'.join((sys.argv[1]).split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
-Z, k = linkage(data.iloc[:100, :], model)
-# linkage_path = '/'.join(model_path.split('/')[:-1] + ['linkage.p'])
-# dump(Z, open(linkage_path, 'wb'))
+Z, k = linkage(data, model)
+
+if not os.path.isdir(out_directory):
+    os.makedirs(out_directory)
+
+linkage_path = '/'.join(out_directory.split('/') + ['linkage.p'])
+dump(Z, open(linkage_path, 'wb'))
 
 # k = 100
 # Z, mm, c, d, s = fast_linkage(data.iloc[:50, :], model)
