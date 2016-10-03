@@ -68,17 +68,21 @@ def gen_mergemat_complete(sequence_probs, clusters, model):
     """
     mergemat = np.empty((len(clusters), len(clusters)))
     mergemat.fill(-1 * np.inf)
+
+    # fill in diagonal with current cluster log liklihoods
     print "Generating merged liklihoods..."
     for i, c1 in enumerate(sorted(clusters.keys())):
         mergemat[i, i] = cluster_liklihood(sequence_probs, clusters[c1],
                                            model)
+    # fill upper triangular entries log liklihood decrease due to
+    for i, c1 in enumerate(sorted(clusters.keys())):
         for j, c2 in enumerate(sorted(clusters.keys())):
             if j > i:
                 nlp = joint_cluster_liklihood(sequence_probs,
                                               clusters[c1],
                                               clusters[c2], model)
                 print i, j
-                mergemat[i, j] = nlp - mergemat[i, i]
+                mergemat[i, j] = nlp - mergemat[i, i] - mergemat[j, j]
 
     mergemat = pd.DataFrame(data=mergemat, index=sorted(clusters.keys()),
                             columns=sorted(clusters.keys()))
@@ -131,7 +135,8 @@ def make_merge(clusters, mergemat, k, sequence_probs, model):
             nlp = joint_cluster_liklihood(sequence_probs, clusters[cid],
                                           clusters[k], model)
 
-            mergemat.loc[cid, k] = nlp - mergemat.loc[k, k]
+            mergemat.loc[cid, k] = \
+                nlp - mergemat.loc[k, k] - mergemat.loc[cid, cid]
 
     # assemble column of linkage matrix
     col = np.array([o1, o2, -1 * mm, ksize])
@@ -364,23 +369,19 @@ def vit_linkage(data, model, start_clusters=None):
     return Z, k
 
 genefile = sys.argv[1]
-model_path = sys.argv[2]
-out_directory = sys.argv[3]
+model_dir = sys.argv[2]
 
 gc, mt, track = load_data()
 genes = load(open(genefile,  'r'))
 data = gc.data.loc[genes, :]
 sequences = data.as_matrix()
 
-model_path = '/'.join((sys.argv[1]).split('/') + ['model'])
+model_path = '/'.join(model_dir.split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
 Z, k = linkage(data, model)
 
-if not os.path.isdir(out_directory):
-    os.makedirs(out_directory)
-
-linkage_path = '/'.join(out_directory.split('/') + ['linkage.p'])
+linkage_path = '/'.join(model_dir.split('/')[:-1] + ['linkage.p'])
 dump(Z, open(linkage_path, 'wb'))
 
 # k = 100
