@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import time
 from pomegranate import HiddenMarkovModel, State, NormalDistribution
 
 
@@ -68,15 +69,13 @@ def gaussian_hmm_from_data(sequences, n_states, model_id, seed=None):
     return model
 
 
-def gaussian_hmm(n_states, lower, upper, variance, model_id, seed=None):
+def gaussian_hmm(n_states, lower, upper, variance, model_id):
     """
     insantiate a model with random parameters
     randomly generates start and transition matrices
     generates nomal distrobutions for each state from partition on sequences
     """
-
-    if seed is not None:
-        np.random.seed(seed)
+    np.random.seed(int(time.time()))
 
     model = HiddenMarkovModel(model_id)
 
