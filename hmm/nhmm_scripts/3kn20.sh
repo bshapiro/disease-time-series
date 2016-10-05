@@ -1,3 +1,4 @@
+cd /home/ktayeb1/disease-time-series/hmm
 python nstate_hmm.py 20 -3 3 0.5 3k_genes.p /scratch0/battle-fs1/my_connectome/profilehmm/3kn20/ 5
 python hmm_agglomerative_path_clustering.py 3k_genes.p /scratch0/battle-fs1/my_connectome/profilehmm/3kn20/0/
 python hmm_agglomerative_path_clustering.py 3k_genes.p /scratch0/battle-fs1/my_connectome/profilehmm/3kn20/1/
