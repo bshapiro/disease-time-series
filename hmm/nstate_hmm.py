@@ -14,12 +14,12 @@ HIGH = 2
 VAR = 0.5
 GF = None
 OD = './'
-THREADCOUNT = 2
+THREADCOUNT = 4
 SHOW_TRAINING = True
 RESTARTS = 4
 ALGORITHM = 'baum-welch'
 # ALGORITHM = 'viterbi'
-STOP_THRESHOLD = 1e-6
+STOP_THRESHOLD = 1e-4
 
 if __name__ == '__main__':
     try:
@@ -55,20 +55,28 @@ if __name__ == '__main__':
     try:
         restarts = int(sys.argv[7])
     except:
-        print 'No restart number specified, using default: ', RESTARTS
-        restarts = RESTARTS
-
+        print 'No start index number specified, using default: ', RESTARTS
+        index = RESTARTS
+    """
+    try:
+        index = int(sys.argv[8])
+    except:
+        print 'No index number specified, using default: ', 0
+        index = 0
+    """
     gc, mt, track = load_data()
     genes = load(open(genefile,  'r'))
 
     data = (gc.data.loc[genes, :])
+    data = data
     sequences = data.as_matrix()
 
     for x in range(restarts):
         out_directory = odir.split('/') + [str(x)]
         out_directory = '/'.join(out_directory)
+
         model = gaussian_hmm(n_states=n_states, lower=lower, upper=upper,
-                             variance=var, model_id='n-state HMM')
+                             variance=var, model_id=('n-state HMM:' + str(x)))
 
         model.fit(sequences.astype(float),
                   verbose=SHOW_TRAINING,
