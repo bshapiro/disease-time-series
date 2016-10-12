@@ -8,7 +8,7 @@ from pickle import load, dump
 from scipy.cluster import hierarchy
 from collections import defaultdict
 from itertools import combinations
-from heapq import heappush, heappop
+from heapq import heappush, heappop, heapify
 import os
 
 
@@ -44,8 +44,8 @@ def cluster_liklihood(sequence_probs, cluster, model):
     cluster1 and cluster2 are lists of indexes into sequences
     model is the hmm
     """
-    probmat = np.ones((data.columns.size, model.state_count() - 2))
-    for sequence in data.loc[cluster, :].T:
+    probmat = np.ones(sequence_probs[sequence_probs.keys()[0]].shape)
+    for sequence in cluster:
         seqprob = sequence_probs[sequence]
         probmat = np.multiply(probmat, seqprob)
     p = probmat.sum(1)  # marginalize out states
@@ -84,7 +84,7 @@ def gen_mergemat_complete(sequence_probs, clusters, model):
                 nlp = joint_cluster_liklihood(sequence_probs,
                                               clusters[c1],
                                               clusters[c2], model)
-                print i, j
+                # print i, j
                 mergemat[i, j] = nlp - cluster_probs[c1] - cluster_probs[c2]
 
     mergemat = pd.DataFrame(data=mergemat, index=sorted(clusters.keys()),
@@ -154,6 +154,7 @@ def make_merge(clusters, mergemat, cluster_probs, k, sequence_probs, model):
 
     # assemble column of linkage matrix
     col = np.array([o1, o2, -1 * mm, ksize])
+    col = np.array([o1, o2, k, ksize])
     col = col.reshape(1, 4)
     return col, clusters, mergemat, cluster_probs
 
@@ -161,24 +162,23 @@ def make_merge(clusters, mergemat, cluster_probs, k, sequence_probs, model):
 def gen_mergeheap(sequence_probs, clusters, model):
     print "Generating merged liklihoods..."
     cluster_probs = {}
-    for c1 in clusters.keys():
-        cluster_probs[c1] = cluster_liklihood(sequence_probs, clusters[c1],
-                                              model)
+    for c in clusters.keys():
+        cluster_probs[c] = cluster_liklihood(sequence_probs, clusters[c],
+                                             model)
     mergeheap = []
     keys = sorted(clusters.keys())
-    for i, cid in enumerate(keys):
+    for i, c1 in enumerate(keys):
         subheap = []
-        for merge in [(cid, a) for a in keys[(i + 1):]]:
-            print merge
-            c1 = clusters[merge[0]]
-            c2 = clusters[merge[1]]
-            cost = joint_cluster_liklihood(sequence_probs, c1, c2, model) - \
-                cluster_probs[merge[0]] - cluster_probs[merge[1]]
-            cost *= -1
-            heappush(subheap, (cost, merge))
+        for j, c2 in enumerate(keys):
+            if j > i:
+                cost = joint_cluster_liklihood(sequence_probs, clusters[c1],
+                                               clusters[c2], model)
+                cost = cost - cluster_probs[c1] - cluster_probs[c2]
+                cost *= -1
+                heappush(subheap, (cost, (i, j)))
 
         # only keep the best merge for that cid
-        if len(subheap) > 0:
+        while len(subheap) > 0:
             heappush(mergeheap, heappop(subheap))
 
     """
@@ -200,43 +200,51 @@ def shrink_heap(mergeheap, keys):
     lookup = defaultdict(bool)
     for key in keys:
         lookup[key] = True
-    newheap = []
-    while len(mergeheap) > 0:
-        cost, merge = heappop(mergeheap)
+    place = 0
+    for i in range(len(mergeheap)):
+        merge = mergeheap[i][1]
         if (lookup[merge[0]] and lookup[merge[1]]):
-            heappush(newheap, (cost, merge))
-    return newheap
+            mergeheap[place] = mergeheap[i]
+            place += 1
+    mergeheap = mergeheap[:place]
+    heapify(mergeheap)
+    return mergeheap
 
 
 def merge(clusters, mergeheap, cluster_probs, k, sequence_probs, model):
     # pop off the heap until we have a valid merge or no merges possible
-    cost, merge = heappop(mergeheap)
-    while not (merge[0] in clusters and merge[1] in clusters):
+    merge_cost, merge = heappop(mergeheap)
+    while merge[0] not in clusters or merge[1] not in clusters:
         if len(mergeheap) > 0:
             # look at next best merge
-            cost, merge = heappop(mergeheap)
+            merge_cost, merge = heappop(mergeheap)
         else:
             # no valid merges left
             return None
 
     clusters[k] = clusters.pop(merge[0]) + clusters.pop(merge[1])
     cluster_probs[k] = cluster_liklihood(sequence_probs, clusters[k], model)
+    cluster_probs.pop(merge[0])
+    cluster_probs.pop(merge[1])
     # push new merges onto the heap
     subheap = []
     for i in clusters.keys():
         if i != k:
             c1 = clusters[k]
             c2 = clusters[i]
-            cost = joint_cluster_liklihood(sequence_probs, c1, c2, model) - \
-                cluster_probs[k] - cluster_probs[i]
+            cost = joint_cluster_liklihood(sequence_probs, c1, c2, model)
+            cost = cost - cluster_probs[k] - cluster_probs[i]
             cost *= -1
             heappush(subheap, (cost, (k, i)))
-    if len(subheap) > 0:
+    while len(subheap) > 0:
         heappush(mergeheap, heappop(subheap))
 
-    col = np.array([merge[0], merge[1], cost, len(clusters[k])]).reshape(1, 4)
-    print 'Merged clusters:', merge[0], merge[1], cost, k, len(mergeheap)
+    col = np.array([merge[0], merge[1], merge_cost, len(clusters[k])]).reshape(1, 4)
+    col = np.array([merge[0], merge[1], k - len(sequence_probs), len(clusters[k])]).reshape(1, 4)
+    print 'Merged clusters:', merge[0], merge[1], merge_cost, k, len(mergeheap)
 
+    if len(mergeheap) >= (len(sequence_probs) * len(sequence_probs) / 2):
+        mergeheap = shrink_heap(mergeheap, clusters.keys())
     return col, mergeheap
 
 
@@ -269,7 +277,7 @@ def heap_linkage(data, model):
         c1 = clusters.keys()[0]
         c2 = clusters.keys()[1]
         clusters[q] = clusters.pop(c1) + clusters.pop(c2)
-        col = np.array([c1, c2, q, len(clusters[q])])
+        col = np.array([c1, c2, q - len(sequence_probs), len(clusters[q])])
         col = col.reshape(1, 4)
         Z = np.concatenate((Z, col), 0)
         q += 1
@@ -497,6 +505,22 @@ def vit_linkage(data, model, start_clusters=None):
     Z = Z[1:, :]
     return Z, k
 
+genefile = '1k_genes.p'
+model_dir = '../results/path_clustering/1kn5/0/'
+
+gc, mt, track = load_data()
+genes = load(open(genefile,  'r'))
+data = gc.data.loc[genes, :]
+sequences = data.as_matrix()
+
+model_path = '/'.join(model_dir.split('/') + ['model'])
+model = HiddenMarkovModel.from_json(model_path)
+
+clusters = {i: [data.index[i]] for i in range(0, data.shape[0])}
+sequence_probs = {seq: model.predict_proba(data.loc[seq, :])
+                  for seq in data.index.values}
+
+"""
 genefile = sys.argv[1]
 model_dir = sys.argv[2]
 agglom_type = 'reg'
@@ -509,9 +533,20 @@ sequences = data.as_matrix()
 model_path = '/'.join(model_dir.split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
-Z, k = heap_linkage(data.iloc[:100, :], model)
-linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
-dump(Z, open(linkage_path, 'wb'))
+Z1, k1 = heap_linkage(data.iloc[:20, :], model)
+Z2, k2 = linkage(data.iloc[:20, :], model)
+
+from scipy.cluster import hierarchy
+from matplotlib import pyplot as plt
+import seaborn as sns
+hierarchy.dendrogram(Z1)
+plt.show()
+hierarchy.dendrogram(Z2)
+plt.show()
+"""
+
+# linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
+# dump(Z, open(linkage_path, 'wb'))
 # linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
 # dump(Z, open(linkage_path, 'wb'))
 """
