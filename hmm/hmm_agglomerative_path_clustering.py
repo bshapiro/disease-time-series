@@ -505,25 +505,9 @@ def vit_linkage(data, model, start_clusters=None):
     Z = Z[1:, :]
     return Z, k
 
-genefile = '1k_genes.p'
-model_dir = '../results/path_clustering/1kn5/0/'
 
-gc, mt, track = load_data()
-genes = load(open(genefile,  'r'))
-data = gc.data.loc[genes, :]
-sequences = data.as_matrix()
-
-model_path = '/'.join(model_dir.split('/') + ['model'])
-model = HiddenMarkovModel.from_json(model_path)
-
-clusters = {i: [data.index[i]] for i in range(0, data.shape[0])}
-sequence_probs = {seq: model.predict_proba(data.loc[seq, :])
-                  for seq in data.index.values}
-
-"""
 genefile = sys.argv[1]
 model_dir = sys.argv[2]
-agglom_type = 'reg'
 
 gc, mt, track = load_data()
 genes = load(open(genefile,  'r'))
@@ -533,37 +517,6 @@ sequences = data.as_matrix()
 model_path = '/'.join(model_dir.split('/') + ['model'])
 model = HiddenMarkovModel.from_json(model_path)
 
-Z1, k1 = heap_linkage(data.iloc[:20, :], model)
-Z2, k2 = linkage(data.iloc[:20, :], model)
-
-from scipy.cluster import hierarchy
-from matplotlib import pyplot as plt
-import seaborn as sns
-hierarchy.dendrogram(Z1)
-plt.show()
-hierarchy.dendrogram(Z2)
-plt.show()
-"""
-
-# linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
-# dump(Z, open(linkage_path, 'wb'))
-# linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
-# dump(Z, open(linkage_path, 'wb'))
-"""
-if agglom_type == 'vit':
-    Z, k = vit_linkage(data, model)
-
-    linkage_path = '/'.join(model_dir.split('/') + ['vit_linkage.p'])
-    dump(Z, open(linkage_path, 'wb'))
-
-else:
-    Z, k = heap_linkage(data, model)
-
-    linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
-    dump(Z, open(linkage_path, 'wb'))
-"""
-
-# k = 100
-# Z, mm, c, d, s = fast_linkage(data.iloc[:50, :], model)
-# linkage_path = '/'.join(model_path.split('/')[:-1] + ['linkage.p'])
-# dump(Z, open(linkage_path, 'wb'))
+Z, k = heap_linkage(data, model)
+linkage_path = '/'.join(model_dir.split('/') + ['linkage.p'])
+dump(Z, open(linkage_path, 'wb'))
