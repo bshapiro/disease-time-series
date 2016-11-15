@@ -508,10 +508,12 @@ def vit_linkage(data, model, start_clusters=None):
 
 genefile = sys.argv[1]
 model_dir = sys.argv[2]
+data_file = int(sys.argv[3])
 
-gc, mt, track = load_data()
+data = pd.DataFrame.from_csv(data_file, sep=' ')
 genes = load(open(genefile,  'r'))
-data = gc.data.loc[genes, :]
+data = (data.loc[genes, :])
+data = ((data.T - data.T.mean()) / data.T.std()).T
 sequences = data.as_matrix()
 
 model_path = '/'.join(model_dir.split('/') + ['model'])
