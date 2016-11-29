@@ -61,7 +61,7 @@ if __name__ == '__main__':
         print 'No start index number specified, using default: ', RESTARTS
         index = RESTARTS
     try:
-        data_file = int(sys.argv[8])
+        data_file = sys.argv[8]
         print 'data: ', data_file
     except:
         pass
