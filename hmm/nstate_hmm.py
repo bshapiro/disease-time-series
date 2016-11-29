@@ -15,18 +15,18 @@ VAR = 0.5
 GF = None
 OD = './'
 THREADCOUNT = 4
-SHOW_TRAINING = True
+SHOW_TRAINING = False
 RESTARTS = 4
 ALGORITHM = 'baum-welch'
 # ALGORITHM = 'viterbi'
-STOP_THRESHOLD = 1e-4
+STOP_THRESHOLD = 1e-8
 
 if __name__ == '__main__':
     try:
         n_states = int(sys.argv[1])
     except:
         print 'Using default number of states = ', STATES
-        states_per_step = STATES
+        n_states = STATES
     try:
         lower = int(sys.argv[2])
     except:
@@ -57,23 +57,23 @@ if __name__ == '__main__':
     except:
         print 'No start index number specified, using default: ', RESTARTS
         index = RESTARTS
-    """
     try:
-        index = int(sys.argv[8])
+        data_file = int(sys.argv[8])
     except:
-        print 'No index number specified, using default: ', 0
-        index = 0
-    """
-    gc, mt, track = load_data()
-    genes = load(open(genefile,  'r'))
+        pass
 
-    data = (gc.data.loc[genes, :])
-    data = data
+    data = pd.DataFrame.from_csv(data_file, sep=' ')
+    genes = load(open(genefile,  'r'))
+    data = (data.loc[genes, :])
+    data = ((data.T - data.T.mean()) / data.T.std()).T
     sequences = data.as_matrix()
 
     for x in range(restarts):
-        out_directory = odir.split('/') + [str(x)]
-        out_directory = '/'.join(out_directory)
+        if restarts == 1:
+            out_directory = odir
+        else:
+            out_directory = odir.split('/') + [str(x)]
+            out_directory = '/'.join(out_directory)
 
         model = gaussian_hmm(n_states=n_states, lower=lower, upper=upper,
                              variance=var, model_id=('n-state HMM:' + str(x)))
@@ -108,8 +108,6 @@ if __name__ == '__main__':
                 f.write(str(path))
                 f.write('\n')
                 f.write('\t'.join(members))
-                f.write('\n')
-                f.write('\n')
                 f.write('\n')
 
         # write model json
