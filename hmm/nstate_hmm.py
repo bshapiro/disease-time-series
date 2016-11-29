@@ -24,6 +24,7 @@ STOP_THRESHOLD = 1e-8
 if __name__ == '__main__':
     try:
         n_states = int(sys.argv[1])
+        print 'states: ', n_states
     except:
         print 'Using default number of states = ', STATES
         n_states = STATES
@@ -44,6 +45,7 @@ if __name__ == '__main__':
         var = VAR
     try:
         genefile = sys.argv[5]
+        print 'genes: ', genefile
     except:
         print 'No gene file specified, using default.'
         genefile = GF
@@ -54,11 +56,13 @@ if __name__ == '__main__':
         odir = OD
     try:
         restarts = int(sys.argv[7])
+        print 'restarts: ', restarts
     except:
         print 'No start index number specified, using default: ', RESTARTS
         index = RESTARTS
     try:
         data_file = int(sys.argv[8])
+        print 'data: ', data_file
     except:
         pass
 
