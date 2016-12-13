@@ -9,7 +9,6 @@ import addpath
 from pickle import load, dump
 from pandas.tools.plotting import autocorrelation_plot
 import os
-from hmm.load_data import load_data
 from matplotlib import pyplot as plt
 import seaborn as sns
 import math
@@ -101,12 +100,14 @@ def autocorr_plot(clusters, data, savedir=None):
 
 sns.set_style("whitegrid", {'axes.grid': False})
 directory = sys.argv[1]
-genefile = sys.argv[2]
-assignment_file = sys.argv[3]
+data_file = sys.argv[2]
+genefile = sys.argv[3]
+assignment_file = sys.argv[4]
 
-gc, mt, track = load_data()
+data = pd.DataFrame.from_csv(data_file, sep=' ')
 genes = load(open(genefile,  'r'))
-data = gc.data.loc[genes, :]
+data = data.loc[genes, :]
+data = ((data.T - data.T.mean()) / data.T.std()).T
 
 assignment_path = '/'.join(directory.split('/') + [assignment_file])
 clusters = load(open(assignment_path, 'r'))
