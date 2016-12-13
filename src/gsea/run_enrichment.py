@@ -17,9 +17,10 @@ def run_enrichment(clusters, all_genes, geneset_name, save_name):
             f = open(save_name + '_' + geneset_title + '_'+cluster, 'w')
         except:
             directory = '/'.join(save_name.split('/')[:-1])
-            print "Creating directory...", directory
-            os.mkdir(directory)
-            f = open(save_name + '_' + geneset_title + '_'+cluster, 'w')
+            if not os.path.isdir(directory):
+		        print "Creating directory...", directory
+		        os.mkdir(directory)
+            f = open(save_name + '_' + geneset_title + '_'+str(cluster), 'w')
         print >>f, "\ttest_inset\ttest_notinset\tbackground_inset\tbackground_notinset\toddsratio\tpvalue\tbonferroni-adjusted\ttestgenes_in_set"
         for i in test_out:
             print >>f, i, '\t', '\t'.join(str(j) for j in test_out[i])
