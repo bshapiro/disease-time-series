@@ -5,7 +5,7 @@ import numpy as np
 
 
 def generate_output_dir():
-    directory = '/Users/benj/Documents/Research/Projects/disease-time-series/gpc/'
+    directory = ''
     directory += config['views'] + '/'
     directory += config['init'] + '/'
     directory += config['kernel'] + '/'
