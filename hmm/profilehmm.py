@@ -1,7 +1,6 @@
 from templates import lr_hmm
 from load_data import load_data
 from pickle import load
-from templates import lr_hmm
 import time
 from collections import defaultdict
 import pandas as pd
@@ -15,7 +14,9 @@ OD = './'
 THREADCOUNT = 2
 SHOW_TRAINING = True
 RESTARTS = 4
-ALGORITHM = 'viterbi'
+ALGORITHM = 'baum-welch'
+# ALGORITHM = 'viterbi'
+STOP_THRESHOLD = 1e6
 
 if __name__ == '__main__':
     try:
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     try:
         odir = sys.argv[3]
     except:
-        print 'No gene file specified, using default.'
+        print 'No output path specified, using default.'
         odir = OD
     try:
         restarts = int(sys.argv[4])
@@ -42,27 +43,32 @@ if __name__ == '__main__':
     gc, mt, track = load_data()
     genes = load(open(genefile,  'r'))
 
-    data = pd.concat((gc.data.loc[genes, :], mt.data))
+    data = (gc.data.loc[genes, :])
     sequences = data.as_matrix()
 
     for x in range(restarts):
         out_directory = odir.split('/') + [str(x)]
         out_directory = '/'.join(out_directory)
         model = lr_hmm(sequences, data.columns.size, states_per_step,
-                       self_trans=False, force_end=True, model_id='Profile HMM',
+                       self_trans=False, force_end=True,
+                       model_id='Profile HMM',
                        seed=int(time.time()))
 
         model.fit(sequences.astype(float),
                   verbose=SHOW_TRAINING,
+                  stop_threshold=STOP_THRESHOLD,
                   algorithm=ALGORITHM,
                   n_jobs=THREADCOUNT)
 
+        # standard assignment scheme
         assignments = defaultdict(list)
         paths = {}
         for sequence in data.index.values:
             path = tuple(model.predict(data.loc[sequence, :]))
             print path
             assignments[path].append(sequence)
+
+        # agglomerative clustering scheme
 
         # write cluster assignments
         if not os.path.isdir(out_directory):
