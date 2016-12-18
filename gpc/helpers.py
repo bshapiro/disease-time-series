@@ -42,6 +42,9 @@ def pair_dict(pairs):
 
 
 def load_te():
+    """
+    Load TE and rearrange in the correct gene order.
+    """
     genes = [item[0] for item in pd.read_csv(open('../data/myeloma/genes.csv'), header=None).values.tolist()]
     te = pd.read_csv(open('../data/myeloma/te.csv'), sep=',', header=0)
     new_te = []

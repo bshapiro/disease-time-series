@@ -9,26 +9,27 @@ from cPickle import dump
 
 
 def run_em(data, gp_clusters, labels):
-    print [cluster.name for cluster in gp_clusters]
-    # In[ ]:
+
     memberships = {}
     iterations = 0
-    for iteration in range(100):
 
-        for cluster in gp_clusters:
+    for iteration in range(100):  # max 100 iterations, but we never hit this number
+
+        for cluster in gp_clusters:  # unassign any samples assigned to clusters
             cluster.clear_samples()
+
         print "Running iteration ", iteration
+
         reassigned_samples = 0
+        for i in range(data.shape[0]):  # iterate through samples
 
-        for i in range(data.shape[0]):
             sample = data[i]
-
             sample = np.reshape(sample, (len(sample), 1))
 
             max_likelihood = None
             max_index = None
             index = 0
-            for cluster in gp_clusters:
+            for cluster in gp_clusters:  # find max likelihood cluster
                 likelihood = cluster.likelihood(sample, range(len(sample)), i)
                 if max_likelihood is None:
                     max_likelihood = likelihood
@@ -38,9 +39,9 @@ def run_em(data, gp_clusters, labels):
                     max_index = index
                 index += 1
 
-            gp_clusters[max_index].assign_sample(sample, i)
+            gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
             if memberships.get(i) != max_index:
-                reassigned_samples += 1
+                reassigned_samples += 1  # keep track of how many are reassigned
                 memberships[i] = max_index
 
         # test convergence
@@ -50,7 +51,7 @@ def run_em(data, gp_clusters, labels):
 
         print "Likelihood after E step:", likelihood_for_clusters(gp_clusters)
 
-        for cluster in gp_clusters:
+        for cluster in gp_clusters:  # reestimate all of the clusters
             if cluster.samples == []:
                 continue
             cluster.reestimate(iteration)
@@ -61,14 +62,6 @@ def run_em(data, gp_clusters, labels):
 
     print "Converged in ", iterations, " iterations."
     print "Number of reassigned samples in last iteration: ", reassigned_samples
-
-    i = 0
-    mismatches = 0
-    if labels is not None:
-        for label in labels:
-            if label != memberships[i]:
-                mismatches += 1
-            i += 1
 
     return gp_clusters, memberships
 
@@ -93,7 +86,7 @@ if __name__ == "__main__":
     gp_clusters, labels = generate_initial_clusters(data, config['dataset'])
     gp_clusters, memberships = run_em(data, gp_clusters.values(), labels)
 
-    for cluster in gp_clusters:
+    for cluster in gp_clusters:  # plot the final clusters with their background samples
         cluster.gp.plot()
         for sample in cluster.samples:
             plt.plot(sample, alpha=0.01)
@@ -101,4 +94,4 @@ if __name__ == "__main__":
         plt.close()
         plt.clf()
 
-    dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))
+    dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))  # dump memberships for further analysis

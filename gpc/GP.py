@@ -27,7 +27,6 @@ def fit_gp(component, x=None, name=None):
         m.kern.variance.set_prior(GPy.priors.Gamma.from_EV(1, 1), warning=False)
         m.kern.lengthscale.set_prior(GPy.priors.Gamma.from_EV(1, 1), warning=False)
         m.likelihood.variance.set_prior(GPy.priors.Gamma.from_EV(0.001, 0.00001), warning=False)
-        # m.likelihood.variance.set_prior(GPy.priors.Gamma.from_EV(0.001, 0.0001), warning=False)
 
     if name.startswith('ribosome'):
         m.kern.variance.set_prior(GPy.priors.Gamma.from_EV(1, 1), warning=False)
@@ -47,6 +46,9 @@ def fit_gp(component, x=None, name=None):
 
 
 def fit_gp_with_priors(component, x=None, name=None):
+    """
+    Uses hybrid monte carlo to estimate GP parameters with priors.
+    """
     if x is None:
         x = np.reshape(np.asfarray(range(len(component))), (len(component), 1))
     else:

@@ -16,39 +16,30 @@ def run_em(datasets, gp_clusterings, related_pairs):
         memberships[dataset_name] = {}
 
     list_of_clusters = []
-    for clustering in gp_clusterings.values():
+    for clustering in gp_clusterings.values():  # generate a flat list of clusters
         for cluster in clustering.values():
             list_of_clusters.append(cluster)
 
-    for iteration in range(100):
+    for iteration in range(100):  # max 100 iterations, but we never hit this number
 
-        for cluster in list_of_clusters:
+        for cluster in list_of_clusters:  # unassign any samples assigned to clusters
             cluster.clear_samples()
 
         reassigned_samples = 0
 
         print "Running iteration ", iteration
-        for dataset_name, data in datasets.items():
-
-            # if converged.get(dataset_name) is not None:
-            #    continue
+        for dataset_name, data in datasets.items():  # iterate through datasets
 
             gp_clusters = gp_clusterings[dataset_name]
 
-            for j in range(data.shape[0]):
+            for j in range(data.shape[0]):  # iterate through samples
                 sample = np.reshape(data[j], (len(data[j]), 1))
 
                 max_likelihood = None
                 max_cluster_name = None
-                for cluster_name, cluster in gp_clusters.items():
+                for cluster_name, cluster in gp_clusters.items():  # find max likelihood cluster
+
                     likelihood = cluster.likelihood(sample, range(len(sample)), j)
-
-                    # if cluster_name in related_pairs.values():
-                    #     related_cluster_name = related_pairs[cluster_name]
-                    #     related_dataset_name = related_cluster_name[:-1]
-                    #     if memberships[related_dataset_name].get(j) is related_cluster_name:
-                    #         likelihood = likelihood * (1.0 - config['strength'])
-
                     if max_likelihood is None:
                         max_likelihood = likelihood
                         max_cluster_name = cluster_name
@@ -56,14 +47,14 @@ def run_em(datasets, gp_clusterings, related_pairs):
                         max_likelihood = likelihood
                         max_cluster_name = cluster_name
 
-                gp_clusters[max_cluster_name].assign_sample(sample, j)
+                gp_clusters[max_cluster_name].assign_sample(sample, j)  # assign sample to max likelihood cluster
 
                 if memberships[dataset_name].get(j) != max_cluster_name:
                     reassigned_samples += 1
                     memberships[dataset_name][j] = max_cluster_name
 
         print "Reassigned samples: ", reassigned_samples
-        if reassigned_samples < 2*0.05*data.shape[0]:  # converged
+        if reassigned_samples < 2*0.05*data.shape[0]:  # check if converged -- add factor of 2
             break
 
         print "Likelihood for E step:", likelihood_for_clusters(list_of_clusters)
@@ -88,8 +79,8 @@ if __name__ == "__main__":
     polya = np.log2(pd.read_csv(open('../data/myeloma/polya.csv'), sep=',', header=None).as_matrix())
     ribosome = np.log2(pd.read_csv(open('../data/myeloma/ribosome.csv'), sep=',', header=None).as_matrix())
     te = load_te()
-    data1 = polya
-    data2 = ribosome
+    data1 = polya  # fix this for now
+    data2 = ribosome  # fix this for now
 
     print "Shape 1:", data1.shape
     print "Shape 2:", data2.shape
@@ -111,13 +102,14 @@ if __name__ == "__main__":
 
     gp_clusters1, labels1 = generate_initial_clusters(data1, 'polya')
     gp_clusters2, labels2 = generate_initial_clusters(data2, 'ribosome')
+    # get linked pairs
     related_pairs = find_max_corr_clusters(gp_clusters1, gp_clusters2, np.arange(0, num_timesteps - 1, 0.2))
 
     gp_clusterings = {'polya': gp_clusters1, 'ribosome': gp_clusters2}
     datasets = {'polya': data1, 'ribosome': data2}
     gp_clusterings, memberships = run_em(datasets, gp_clusterings, related_pairs)
 
-    for clustering in gp_clusterings.values():
+    for clustering in gp_clusterings.values():  # plot final clusters
         for cluster in clustering.values():
             cluster.gp.plot()
             for sample in cluster.samples:
@@ -126,4 +118,4 @@ if __name__ == "__main__":
             plt.close()
             plt.clf()
 
-    pickle.dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))
+    pickle.dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))  # dump memberships for further analysis

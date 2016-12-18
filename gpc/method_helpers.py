@@ -9,6 +9,9 @@ import operator
 
 
 def generate_initial_clusters(data, data_name):
+    """
+    Generates the initial clusters based on config.
+    """
     if config['init'] is 'kmeans':
         kmeans_model = KMeans(config['k'], max_iter=1000)
         labels = kmeans_model.fit_predict(data)
@@ -45,6 +48,9 @@ def generate_initial_clusters(data, data_name):
 
 
 def generate_myeloma_paper_labels():
+    """
+    Labels each sample based on membership in myeloma paper clusters.
+    """
     genes = [item[0] for item in pd.read_csv(open('../data/myeloma/genes.csv'), header=None).values.tolist()]
     upreg = [item[0] for item in pd.read_csv(open('../data/myeloma/upreg.csv'), header=None).values.tolist()]
     downreg = [item[0] for item in pd.read_csv(open('../data/myeloma/downreg.csv'), header=None).values.tolist()]
@@ -64,11 +70,14 @@ def generate_myeloma_paper_labels():
         elif gene in teup:
             labels.append(4)
         else:
-            labels.append(-1)
+            labels.append(-1)  # if not in clusters
     return labels
 
 
 def likelihood_given_init_clusters(data, labels, gp_clusters, data_name):
+    """
+    Calculate the likelihood of the data given the initial cluster choices.
+    """
     total_likelihood = 0
     index = 0
     for sample in data:
@@ -84,6 +93,9 @@ def likelihood_given_init_clusters(data, labels, gp_clusters, data_name):
 
 
 def likelihood_for_clusters(gp_clusters):
+    """
+    Calculate the likelihood of all the data assigned to their clusters.
+    """
     total_likelihood = 0
     for cluster in gp_clusters:
         if len(cluster.samples) != 0:
@@ -102,6 +114,10 @@ def differential_transform(data):
 
 
 def find_max_corr_clusters(gp_clusters1, gp_clusters2, domain):
+    """
+    Finds the clusters to link. Samples each cluster over the domain to approximate
+    that cluster and then computes pearson correlation (for now) between sets of samples.
+    """
     num_related = config['num_related']
     corr = {}
     domain = np.reshape(domain, (domain.shape[0], 1))
@@ -116,7 +132,7 @@ def find_max_corr_clusters(gp_clusters1, gp_clusters2, domain):
     num_left = num_related
     pairs = []
 
-    while num_left > 0:
+    while num_left > 0:  # sort the samples but don't include repeats
         pair = sorted_x.pop(0)[0]
         pairs.append(pair)
         new_sorted_x = []
@@ -129,8 +145,9 @@ def find_max_corr_clusters(gp_clusters1, gp_clusters2, domain):
                 new_sorted_x.append(item)
         num_left = num_left - 1
         sorted_x = new_sorted_x
+
     print "Pairs:", pairs
-    for pair in pairs:
+    for pair in pairs:  # add the actual links to the GP cluster objects
         gp_cluster1 = gp_clusters1[pair[0]]
         gp_cluster2 = gp_clusters2[pair[1]]
         gp_cluster1.add_link(gp_cluster2)
