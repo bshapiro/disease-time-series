@@ -12,6 +12,7 @@ def run_em(data, gp_clusters, labels):
 
     memberships = {}
     iterations = 0
+    likelihoods = []
 
     for iteration in range(100):  # max 100 iterations, but we never hit this number
 
@@ -49,21 +50,25 @@ def run_em(data, gp_clusters, labels):
         if reassigned_samples < 0.05*data.shape[0]:
             break
 
-        print "Likelihood after E step:", likelihood_for_clusters(gp_clusters)
+        e_likelihood = likelihood_for_clusters(gp_clusters)
+        print "Likelihood after E step:", e_likelihood
+        likelihoods.append(e_likelihood)
 
         for cluster in gp_clusters:  # reestimate all of the clusters
             if cluster.samples == []:
                 continue
             cluster.reestimate(iteration)
 
-        print "Likelihood after M step:", likelihood_for_clusters(gp_clusters)
+        m_likelihood = likelihood_for_clusters(gp_clusters)
+        print "Likelihood after M step:", m_likelihood
+        likelihoods.append(m_likelihood)
 
         iterations += 1
 
     print "Converged in ", iterations, " iterations."
     print "Number of reassigned samples in last iteration: ", reassigned_samples
 
-    return gp_clusters, memberships
+    return gp_clusters, memberships, likelihoods
 
 if __name__ == "__main__":
     config['views'] = 'single'
@@ -83,8 +88,9 @@ if __name__ == "__main__":
     else:
         data = scale(data.T, with_mean=True, with_std=True).T
 
-    gp_clusters, labels = generate_initial_clusters(data, config['dataset'])
-    gp_clusters, memberships = run_em(data, gp_clusters.values(), labels)
+    gp_clusters, labels, init_likelihood = generate_initial_clusters(data, config['dataset'])
+    gp_clusters, memberships, likelihoods = run_em(data, gp_clusters.values(), labels)
+    likelihoods.insert(0, init_likelihood)
 
     for cluster in gp_clusters:  # plot the final clusters with their background samples
         cluster.gp.plot()
@@ -93,5 +99,9 @@ if __name__ == "__main__":
         plt.savefig(generate_output_dir() + cluster.name + '_final_m.png')
         plt.close()
         plt.clf()
+
+    plt.plot(likelihoods)
+    plt.savefig(generate_output_dir() + '_likelihoods.png')
+    plt.clf()
 
     dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))  # dump memberships for further analysis

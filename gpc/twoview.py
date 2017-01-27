@@ -12,6 +12,8 @@ def run_em(datasets, gp_clusterings, related_pairs):
 
     iterations = 0
     memberships = {}
+    likelihoods = []
+
     for dataset_name in datasets.keys():
         memberships[dataset_name] = {}
 
@@ -57,7 +59,9 @@ def run_em(datasets, gp_clusterings, related_pairs):
         if reassigned_samples < 2*0.05*data.shape[0]:  # check if converged -- add factor of 2
             break
 
-        print "Likelihood for E step:", likelihood_for_clusters(list_of_clusters)
+        e_likelihood = likelihood_for_clusters(list_of_clusters)
+        print "Likelihood for E step:", e_likelihood
+        likelihoods.append(e_likelihood)
 
         for dataset_name, data in datasets.items():
             for cluster in gp_clusterings[dataset_name].values():
@@ -65,14 +69,16 @@ def run_em(datasets, gp_clusterings, related_pairs):
                     continue
                 cluster.reestimate(iteration)
 
-        print "Likelihood after M step:", likelihood_for_clusters(list_of_clusters)
+        m_likelihood = likelihood_for_clusters(list_of_clusters)
+        print "Likelihood after M step:", m_likelihood
+        likelihoods.append(m_likelihood)
 
         iterations += 1
 
     print "Converged in ", iterations, " iterations."
     print "Number of reassigned samples in last iteration: ", reassigned_samples
 
-    return gp_clusterings, memberships
+    return gp_clusterings, memberships, likelihoods
 
 if __name__ == "__main__":
     config['views'] = 'two'
@@ -100,14 +106,16 @@ if __name__ == "__main__":
 
     num_timesteps = data1.shape[1]
 
-    gp_clusters1, labels1 = generate_initial_clusters(data1, 'polya')
-    gp_clusters2, labels2 = generate_initial_clusters(data2, 'ribosome')
+    gp_clusters1, labels1, init_likelihood1 = generate_initial_clusters(data1, 'polya')
+    gp_clusters2, labels2, init_likelihood2 = generate_initial_clusters(data2, 'ribosome')
     # get linked pairs
     related_pairs = find_max_corr_clusters(gp_clusters1, gp_clusters2, np.arange(0, num_timesteps - 1, 0.2))
 
     gp_clusterings = {'polya': gp_clusters1, 'ribosome': gp_clusters2}
     datasets = {'polya': data1, 'ribosome': data2}
-    gp_clusterings, memberships = run_em(datasets, gp_clusterings, related_pairs)
+    gp_clusterings, memberships, likelihoods = run_em(datasets, gp_clusterings, related_pairs)
+
+    likelihoods.insert(0, init_likelihood1 + init_likelihood2)
 
     for clustering in gp_clusterings.values():  # plot final clusters
         for cluster in clustering.values():
@@ -117,5 +125,9 @@ if __name__ == "__main__":
             plt.savefig(generate_output_dir() + cluster.name + '_final_m.png')
             plt.close()
             plt.clf()
+
+    plt.plot(likelihoods)
+    plt.savefig(generate_output_dir() + '_likelihoods.png')
+    plt.clf()
 
     pickle.dump(memberships, open(generate_output_dir() + 'memberships.dump', 'w'))  # dump memberships for further analysis

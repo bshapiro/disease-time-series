@@ -42,9 +42,10 @@ def generate_initial_clusters(data, data_name):
         gp_clusters[name] = GPCluster(gp, name)
         i += 1
 
-    print "Initial likelihood:", likelihood_given_init_clusters(data, labels, gp_clusters, data_name)
+    init_likelihood = likelihood_given_init_clusters(data, labels, gp_clusters, data_name)
+    print "Initial likelihood:", init_likelihood
 
-    return gp_clusters, labels
+    return gp_clusters, labels, init_likelihood
 
 
 def generate_myeloma_paper_labels():
