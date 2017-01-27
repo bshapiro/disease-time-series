@@ -1,3 +1,8 @@
+###### MUST COME FIRST ######
+import matplotlib as mpl
+mpl.use('Agg')
+#############################
+
 from config import config
 from helpers import *
 from method_helpers import *
