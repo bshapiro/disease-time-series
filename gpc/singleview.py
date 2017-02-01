@@ -66,6 +66,7 @@ def run_em(data, gp_clusters, labels):
         #     cluster.reestimate(iteration)
         pool = Pool()
         pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
+        pool.close()
         pool.join()
 
         m_likelihood = likelihood_for_clusters(gp_clusters)
