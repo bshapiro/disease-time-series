@@ -33,18 +33,13 @@ def run_em(data, gp_clusters, labels):
             sample = data[i]
             sample = np.reshape(sample, (len(sample), 1))
 
-            max_likelihood = None
-            max_index = None
-            index = 0
+            sample_likelihoods = []
             for cluster in gp_clusters:  # find max likelihood cluster
                 likelihood = cluster.likelihood(sample, range(len(sample)), i)
-                if max_likelihood is None:
-                    max_likelihood = likelihood
-                    max_index = index
-                elif likelihood > max_likelihood:
-                    max_likelihood = likelihood
-                    max_index = index
-                index += 1
+                sample_likelihoods.append(likelihood)
+
+            max_likelihood = max(sample_likelihoods)
+            max_index = sample_likelihoods.index(max_likelihood)
 
             gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
             if memberships.get(i) != max_index:
