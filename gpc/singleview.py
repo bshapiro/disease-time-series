@@ -90,7 +90,7 @@ if __name__ == "__main__":
     te = load_te()
     datasets = {'polya': polya, 'ribosome': ribosome, 'te': te}
     data = datasets[config['dataset']]
-    data = data[:500]  # TODO: REMOVE
+    # data = data[:500]  # TODO: REMOVE
     print "Shape:", data.shape
 
     if config['differential_transform']:
@@ -107,6 +107,8 @@ if __name__ == "__main__":
     likelihoods.insert(0, init_likelihood)
 
     for cluster in gp_clusters:  # plot the final clusters with their background samples
+        if cluster.samples == []:
+            continue
         cluster.gp.plot()
         for sample in cluster.samples:
             plt.plot(sample, alpha=0.01)

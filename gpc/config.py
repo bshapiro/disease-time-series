@@ -1,7 +1,7 @@
 config = {'gp_variance': None,  # no need to change
           'gp_lengthscale': None,  # no need to change
           'kernel': 'stack',  # no need to change
-          'k': 20,  # set K
+          'k': 70,  # set K
           'dir': 'clusters',  # no need to change
           'differential_transform': False,  # differential or 0-mean view
           'init': 'kmeans',  # kmeans or myeloma_paper
