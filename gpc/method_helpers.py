@@ -165,7 +165,7 @@ def m_step(cluster, iteration):
 
 @unpack_args
 def e_step(sample, gp_clusters):
-    i = sample[0]
+    i = int(sample[0])
     sample = np.reshape(sample[1:], (len(sample[1:]), 1))
 
     sample_likelihoods = []
