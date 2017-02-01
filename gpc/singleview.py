@@ -55,14 +55,16 @@ def run_em(data, gp_clusters, labels):
         print "Likelihood after E step:", e_likelihood
         likelihoods.append(e_likelihood)
 
-        # for cluster in gp_clusters:  # reestimate all of the clusters
-        #     if cluster.samples == []:
-        #         continue
-        #     cluster.reestimate(iteration)
-        pool = Pool()
-        pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
-        pool.close()
-        pool.join()
+        if config['parallel']:
+            pool = Pool()
+            pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
+            pool.close()
+            pool.join()
+        else:
+            for cluster in gp_clusters:  # reestimate all of the clusters
+                if cluster.samples == []:
+                    continue
+                cluster.reestimate(iteration)
 
         m_likelihood = likelihood_for_clusters(gp_clusters)
         print "Likelihood after M step:", m_likelihood
