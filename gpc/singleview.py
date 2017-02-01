@@ -95,7 +95,7 @@ if __name__ == "__main__":
     te = load_te()
     datasets = {'polya': polya, 'ribosome': ribosome, 'te': te}
     data = datasets[config['dataset']]
-    # data = data[:500]  # TODO: REMOVE
+    data = data[:500]  # TODO: REMOVE
     print "Shape:", data.shape
 
     if config['differential_transform']:
