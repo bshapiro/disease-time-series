@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from cPickle import dump
 from multiprocessing import Pool
-import parmap
 
 
 def run_em(data, gp_clusters, labels):
