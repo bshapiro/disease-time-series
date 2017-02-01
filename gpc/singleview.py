@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from cPickle import dump
+from multiprocessing import Pool
+import parmap
 
 
 def run_em(data, gp_clusters, labels):
@@ -59,10 +61,13 @@ def run_em(data, gp_clusters, labels):
         print "Likelihood after E step:", e_likelihood
         likelihoods.append(e_likelihood)
 
-        for cluster in gp_clusters:  # reestimate all of the clusters
-            if cluster.samples == []:
-                continue
-            cluster.reestimate(iteration)
+        # for cluster in gp_clusters:  # reestimate all of the clusters
+        #     if cluster.samples == []:
+        #         continue
+        #     cluster.reestimate(iteration)
+        pool = Pool()
+        pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
+        pool.join()
 
         m_likelihood = likelihood_for_clusters(gp_clusters)
         print "Likelihood after M step:", m_likelihood
@@ -75,6 +80,12 @@ def run_em(data, gp_clusters, labels):
 
     return gp_clusters, memberships, likelihoods
 
+@unpack_args
+def m_step(cluster, iteration):
+    if cluster.samples == []:
+        return
+    cluster.reestimate(iteration)
+
 if __name__ == "__main__":
     config['views'] = 'single'
     polya = np.log2(pd.read_csv(open('../data/myeloma/polya.csv'), sep=',', header=None).as_matrix())
@@ -82,6 +93,7 @@ if __name__ == "__main__":
     te = load_te()
     datasets = {'polya': polya, 'ribosome': ribosome, 'te': te}
     data = datasets[config['dataset']]
+    data = data[:500]  # TODO: REMOVE
     print "Shape:", data.shape
 
     if config['differential_transform']:

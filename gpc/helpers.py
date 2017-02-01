@@ -80,3 +80,14 @@ def load_myeloma_paper_clusters():
         upreg_indices.append(genes.index(gene))
 
     return upreg_indices, downreg_indices, stable_indices, tedown_indices, teup_indices
+
+
+def unpack_args(func):
+    from functools import wraps
+    @wraps(func)
+    def wrapper(args):
+        if isinstance(args, dict):
+            return func(**args)
+        else:
+            return func(*args)
+    return wrapper
