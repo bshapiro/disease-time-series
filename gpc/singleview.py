@@ -28,23 +28,33 @@ def run_em(data, gp_clusters, labels):
         print "Running iteration ", iteration
 
         reassigned_samples = 0
-        for i in range(data.shape[0]):  # iterate through samples
+        if config['parallel']:
+            pool = Pool()
+            new_memberships = dict(pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters))))
+            pool.close()
+            pool.join()
+            for key, value in new_memberships:
+                if new_memberships[key] != memberships[key]:
+                    reassigned_samples += 1
+            memberships = new_memberships
+        else:
+            for i in range(data.shape[0]):  # iterate through samples
 
-            sample = data[i]
-            sample = np.reshape(sample, (len(sample), 1))
+                sample = data[i]
+                sample = np.reshape(sample, (len(sample), 1))
 
-            sample_likelihoods = []
-            for cluster in gp_clusters:  # find max likelihood cluster
-                likelihood = cluster.likelihood(sample, range(len(sample)), i)
-                sample_likelihoods.append(likelihood)
+                sample_likelihoods = []
+                for cluster in gp_clusters:  # find max likelihood cluster
+                    likelihood = cluster.likelihood(sample, range(len(sample)), i)
+                    sample_likelihoods.append(likelihood)
 
-            max_likelihood = max(sample_likelihoods)
-            max_index = sample_likelihoods.index(max_likelihood)
+                max_likelihood = max(sample_likelihoods)
+                max_index = sample_likelihoods.index(max_likelihood)
 
-            gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
-            if memberships.get(i) != max_index:
-                reassigned_samples += 1  # keep track of how many are reassigned
-                memberships[i] = max_index
+                gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
+                if memberships.get(i) != max_index:
+                    reassigned_samples += 1  # keep track of how many are reassigned
+                    memberships[i] = max_index
 
         # test convergence
         print "Reassigned samples: ", reassigned_samples
@@ -76,12 +86,6 @@ def run_em(data, gp_clusters, labels):
     print "Number of reassigned samples in last iteration: ", reassigned_samples
 
     return gp_clusters, memberships, likelihoods
-
-@unpack_args
-def m_step(cluster, iteration):
-    if cluster.samples == []:
-        return
-    cluster.reestimate(iteration)
 
 if __name__ == "__main__":
     config['views'] = 'single'

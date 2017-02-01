@@ -154,3 +154,26 @@ def find_max_corr_clusters(gp_clusters1, gp_clusters2, domain):
         gp_cluster1.add_link(gp_cluster2)
         gp_cluster2.add_link(gp_cluster1)
     return pair_dict(pairs)
+
+
+@unpack_args
+def m_step(cluster, iteration):
+    if cluster.samples == []:
+        return
+    cluster.reestimate(iteration)
+
+
+@unpack_args
+def e_step(sample, gp_clusters, memberships, i):
+    sample = np.reshape(sample, (len(sample), 1))
+
+    sample_likelihoods = []
+    for cluster in gp_clusters:  # find max likelihood cluster
+        likelihood = cluster.likelihood(sample, range(len(sample)), i)
+        sample_likelihoods.append(likelihood)
+
+    max_likelihood = max(sample_likelihoods)
+    max_index = sample_likelihoods.index(max_likelihood)
+
+    gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
+    return i, max_index
