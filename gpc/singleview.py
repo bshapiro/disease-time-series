@@ -34,7 +34,7 @@ def run_em(data, gp_clusters, labels):
             new_memberships = dict(pool.map(e_step, zip(data_labeled, [gp_clusters]*data.shape[0])))
             pool.close()
             pool.join()
-            for key, value in new_memberships:
+            for key, value in new_memberships.items():
                 if new_memberships[key] != memberships[key]:
                     reassigned_samples += 1
             memberships = new_memberships
