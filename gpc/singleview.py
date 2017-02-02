@@ -35,7 +35,7 @@ def run_em(data, gp_clusters, labels):
             pool.close()
             pool.join()
             for key, value in new_memberships.items():
-                if new_memberships[key] != memberships[key]:
+                if new_memberships[key] != memberships.get(key):
                     reassigned_samples += 1
             memberships = new_memberships
         else:
