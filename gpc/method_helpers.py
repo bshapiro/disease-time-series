@@ -159,7 +159,7 @@ def find_max_corr_clusters(gp_clusters1, gp_clusters2, domain):
 @unpack_args
 def m_step(cluster, iteration):
     if cluster.samples == []:
-        return
+        return cluster
     cluster.reestimate(iteration)
     return cluster
 
