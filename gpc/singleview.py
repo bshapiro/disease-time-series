@@ -68,7 +68,7 @@ def run_em(data, gp_clusters, labels):
 
         if config['parallel']:
             pool = Pool()
-            pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
+            gp_clusters = pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
             pool.close()
             pool.join()
         else:

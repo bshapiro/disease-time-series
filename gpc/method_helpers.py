@@ -161,6 +161,7 @@ def m_step(cluster, iteration):
     if cluster.samples == []:
         return
     cluster.reestimate(iteration)
+    return cluster
 
 
 @unpack_args
