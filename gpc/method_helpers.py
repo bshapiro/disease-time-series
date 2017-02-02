@@ -179,3 +179,9 @@ def e_step(sample, gp_clusters):
 
     gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
     return i, max_index
+
+
+def assign_labeled_sample(sample, memberships, gp_clusters):
+    i = sample[0]
+    sample = sample[1:]
+    gp_clusters[memberships[i]].assign_sample(sample, i)

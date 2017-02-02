@@ -38,6 +38,7 @@ def run_em(data, gp_clusters, labels):
                 if new_memberships[key] != memberships.get(key):
                     reassigned_samples += 1
             memberships = new_memberships
+            map(lambda sample: assign_labeled_sample(sample, memberships, gp_clusters), data_labeled)
         else:
             for i in range(data.shape[0]):  # iterate through samples
 
