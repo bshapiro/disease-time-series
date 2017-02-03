@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from cPickle import dump
 from multiprocessing import Pool
+from itertools import repeat
 
 
 def run_em(data, gp_clusters, labels):
@@ -31,7 +32,7 @@ def run_em(data, gp_clusters, labels):
         if config['parallel']:
             data_labeled = np.column_stack((range(data.shape[0]), data))
             pool = Pool()
-            new_memberships = dict(pool.map(e_step, zip(data_labeled, [gp_clusters]*data.shape[0])))
+            new_memberships = dict(pool.map(e_step, zip(data_labeled, repeat(gp_clusters))))
             pool.close()
             pool.join()
             for key, value in new_memberships.items():
