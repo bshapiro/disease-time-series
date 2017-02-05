@@ -6,6 +6,7 @@ from scipy.stats import spearmanr, pearsonr
 from sklearn.cluster import KMeans
 import numpy as np
 import operator
+import gc
 
 
 def generate_initial_clusters(data, data_name):

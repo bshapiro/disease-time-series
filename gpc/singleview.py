@@ -69,7 +69,7 @@ def run_em(data, gp_clusters, labels):
         likelihoods.append(e_likelihood)
 
         if config['parallel']:
-            pool = Pool()
+            pool = Pool(maxtasksperchild=4)
             gp_clusters = pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
             pool.close()
             pool.join()
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     te = load_te()
     datasets = {'polya': polya, 'ribosome': ribosome, 'te': te}
     data = datasets[config['dataset']]
-    data = data[:500]  # TODO: REMOVE
+    # data = data[:500]  # TODO: REMOVE
     print "Shape:", data.shape
 
     if config['differential_transform']:
