@@ -33,7 +33,7 @@ def run_em(data, gp_clusters, labels):
         reassigned_samples = 0
         if config['parallel']:
             data_labeled = np.column_stack((range(data.shape[0]), data))
-            pool = Pool(maxtasksperchild=100)
+            pool = Pool(processes=config['n_processes'], maxtasksperchild=100)
             new_memberships = dict(pool.map(e_step, zip(data_labeled, repeat(gp_clusters))))
             pool.close()
             pool.join()
@@ -71,7 +71,7 @@ def run_em(data, gp_clusters, labels):
         likelihoods.append(e_likelihood)
 
         if config['parallel']:
-            pool = Pool(maxtasksperchild=1)
+            pool = Pool(processes=config['n_processes'], maxtasksperchild=1)
             gp_clusters = pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))
             pool.close()
             pool.join()

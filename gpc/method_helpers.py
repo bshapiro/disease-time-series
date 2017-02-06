@@ -178,7 +178,6 @@ def e_step(sample, gp_clusters):
     max_likelihood = max(sample_likelihoods)
     max_index = sample_likelihoods.index(max_likelihood)
 
-    gp_clusters[max_index].assign_sample(sample, i)  # assign samples to clusters
     return i, max_index
 
 

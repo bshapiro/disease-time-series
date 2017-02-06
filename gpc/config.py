@@ -8,5 +8,6 @@ config = {'gp_variance': None,  # no need to change
           'num_related': 2,  # set J
           'strength': 0.3,  # set strength parameter
           'dataset': 'ribosome',  # if single view, which view? ribosome or polya
-          'parallel': True 
+          'parallel': True,
+          'n_processes': 4
           }
