@@ -17,7 +17,7 @@ from itertools import repeat
 
 def run_em(data, gp_clusters, labels):
     if config['parallel']:
-        print "Using " + str(cpu_count()) + " processes."
+        print "Using max of " + str(cpu_count()) + " processes."
 
     memberships = {}
     iterations = 0
@@ -29,7 +29,7 @@ def run_em(data, gp_clusters, labels):
             cluster.clear_samples()
 
         print "Running iteration ", iteration
-
+        print "Running E step..."
         reassigned_samples = 0
         if config['parallel']:
             data_labeled = np.column_stack((range(data.shape[0]), data))
@@ -69,7 +69,7 @@ def run_em(data, gp_clusters, labels):
         e_likelihood = likelihood_for_clusters(gp_clusters)
         print "Likelihood after E step:", e_likelihood
         likelihoods.append(e_likelihood)
-
+        print "Running M step..."
         if config['parallel']:
             pool = Pool(processes=config['n_processes'], maxtasksperchild=1)
             gp_clusters = pool.map(m_step, zip(gp_clusters, [iteration]*len(gp_clusters)))

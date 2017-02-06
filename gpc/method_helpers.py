@@ -101,11 +101,15 @@ def likelihood_for_clusters(gp_clusters):
     total_likelihood = 0
     for cluster in gp_clusters:
         if len(cluster.samples) != 0:
-            x = range(len(cluster.samples[0]))
-            index = 0
-            for sample in cluster.samples:
-                total_likelihood += cluster.likelihood(sample, x, index)
-                index += 1
+            # x = range(len(cluster.samples[0]))
+            # index = 0
+            # for sample in cluster.samples:
+            #     total_likelihood += cluster.likelihood(sample, x, index)
+            #     index += 1
+            total_y = np.reshape(np.asarray(cluster.samples), (len(cluster.samples) * len(cluster.samples[0]), 1))
+            total_x = range(len(cluster.samples[0]) * len(cluster.samples))
+            total_x = np.reshape(np.asarray(total_x), (len(total_x), 1))
+            total_likelihood = sum(cluster.likelihood(total_y, total_x, 0))
     return total_likelihood
 
 
