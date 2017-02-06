@@ -33,7 +33,7 @@ def run_em(data, gp_clusters, labels):
         reassigned_samples = 0
         if config['parallel']:
             data_labeled = np.column_stack((range(data.shape[0]), data))
-            pool = Pool()
+            pool = Pool(maxtasksperchild=100)
             new_memberships = dict(pool.map(e_step, zip(data_labeled, repeat(gp_clusters))))
             pool.close()
             pool.join()
